@@ -135,7 +135,7 @@ export default function UnitManagement() {
                                 <td className="p-4 font-medium text-gray-800">{item.name}</td>
                                 <td className="p-4">
                                 <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${item.status === 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                    {item.status === 1 ? 'ACTIVE' : 'DEACTIVE'}
+                                    {item.status === 1 ? t('active') : t('deactive')}
                                 </span>
                                 </td>
                                 <td className="p-4">
