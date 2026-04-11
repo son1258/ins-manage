@@ -54,10 +54,10 @@ export default function UnitManagement() {
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800 uppercase">{t('manage_unit')}</h2>
+                <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_unit')}</h2>
                 <button
                     onClick={createNew} 
-                    className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-sm">
+                    className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-xs md:text-sm">
                     <FontAwesomeIcon icon={faPlus} /> {t('add_unit')}
                 </button>
             </div>
@@ -116,38 +116,62 @@ export default function UnitManagement() {
                     </div>
                 </form>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-left border-collapse text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                        <th className="p-4 font-semibold text-gray-700 w-16 text-center">{t('index')}</th>
-                        <th className="p-4 font-semibold text-gray-700">{t('unit_code')}</th>
-                        <th className="p-4 font-semibold text-gray-700">{t('unit_name')}</th>
-                        <th className="p-4 font-semibold text-gray-700">{t('status')}</th>
-                        <th className="p-4 font-semibold text-gray-700 text-center">{t('action')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {listUnits.map((item, index) => (
-                            <tr key={item.code} className="border-b border-gray-100 hover:bg-blue-50 transition">
-                                <td className="p-4 text-center">{index + 1}</td>
-                                <td className="p-4 font-mono font-bold text-blue-600">{item.code}</td>
-                                <td className="p-4 font-medium text-gray-800">{item.name}</td>
-                                <td className="p-4">
-                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${item.status === 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                    {item.status === 1 ? t('active') : t('deactive')}
-                                </span>
-                                </td>
-                                <td className="p-4">
-                                <div className="flex justify-center gap-4 text-gray-500">
-                                    <button className="hover:text-blue-600"><FontAwesomeIcon icon={faEdit} /></button>
-                                    <button className="hover:text-red-600"><FontAwesomeIcon icon={faTrashAlt} /></button>
-                                </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                    </table>
+                <div className="bg-white rounded shadow overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[13px] text-left border-collapse">
+                            <thead>
+                                <tr className="bg-[#1e3a5f] text-white whitespace-nowrap">
+                                    <th className="px-4 py-3 font-semibold border-r border-white text-center w-16">
+                                        {t('index')}
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold border-r border-white">
+                                        {t('unit_code')}
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold border-r border-white">
+                                        {t('unit_name')}
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold border-r border-white">
+                                        {t('status')}
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold text-center">
+                                        {t('action')}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {listUnits.map((item, index) => (
+                                    <tr key={item.code} className="hover:bg-blue-50/30 transition-colors">
+                                        <td className="px-4 py-3 text-center text-gray-600">
+                                            {index + 1}
+                                        </td>
+                                        <td className="px-4 py-3 font-medium text-blue-600">
+                                            {item.code}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-700">
+                                            {item.name}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                                                item.status === 1 
+                                                ? 'bg-teal-400 text-white' 
+                                                : 'bg-red-500 text-white'
+                                            }`}>
+                                                {item.status === 1 ? t('active').toUpperCase() : t('deactive').toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
+                                            <button className="hover:text-blue-600 transition-colors">
+                                                <FontAwesomeIcon icon={faEdit} />
+                                            </button>
+                                            <button className="hover:text-red-600 transition-colors">
+                                                <FontAwesomeIcon icon={faTrashAlt} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
