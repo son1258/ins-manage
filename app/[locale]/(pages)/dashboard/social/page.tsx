@@ -189,7 +189,7 @@ export default function Social() {
             </form>
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
+                    <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4 gap-2">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_social_ins')}</h1>
                             <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>

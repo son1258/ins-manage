@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import Link from 'next/link';
+import InputGroup from '@/components/InputGroup';
 
 export default function Medical() {
     const t = useTranslations();
@@ -116,11 +117,11 @@ export default function Medical() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-gray-600">{t('type_declaration')}</label>
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('type_declaration')}</label>
                             <select
                                 value={formData.declarationType}
                                 onChange={(e)=>handleValueChange("declarationType", e.target.value)}
-                                className="h-10 border border-gray-300 rounded px-3 text-sm outline-none bg-white transition-all">
+                                className="h-8 border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all">
                                 <option value="" disabled>{t('select_option')}</option>
                                 {declarations.map((type) => 
                                     <option key={type.code} value={type.code}>{`${type.name} (${type.acronym.toUpperCase()})`}</option>
@@ -128,32 +129,24 @@ export default function Medical() {
                             </select>
                         </div>
 
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-gray-600">{t('social_code')}</label>
-                            <input 
-                                type="text"
-                                value={formData.socialCode}
-                                onChange={(e)=>handleValueChange("socialCode", e.target.value)}
-                                className="h-10 border border-gray-300 rounded px-3 text-sm outline-none transition-all"
-                            />
-                        </div>
+                        <InputGroup 
+                            label={t('social_code')} 
+                            value={formData.socialCode}
+                            onChange={(e)=>handleValueChange("socialCode", e.target.value)}
+                        />
+
+                        <InputGroup 
+                            label={t('customer_name')} 
+                            value={formData.customerName}
+                            onChange={(e)=>handleValueChange("customerName", e.target.value)}
+                        />
 
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-gray-600">{t('customer_name')}</label>
-                            <input 
-                                type="text"
-                                value={formData.customerName}
-                                onChange={(e)=>handleValueChange("customerName", e.target.value)}
-                                className="h-10 border border-gray-300 rounded px-3 text-sm outline-none transition-all"
-                            />
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-gray-600">{t('status')}</label>
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('status')}</label>
                             <select
                                 value={formData.status}
                                 onChange={(e)=>handleValueChange("status", e.target.value)}
-                                className="h-10 border border-gray-300 rounded px-3 text-sm outline-none bg-white transition-all">
+                                className="h-8 border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all">
                                 <option value="" disabled>{t('select_option')}</option>
                                 {status.map((state) => 
                                     <option key={state.code} value={state.code}>{state.name}</option>
@@ -162,11 +155,11 @@ export default function Medical() {
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-gray-600">{t('plan')}</label>
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('plan')}</label>
                             <select
                                 value={formData.plan}
                                 onChange={(e)=>handleValueChange("plan", e.target.value)}
-                                className="h-10 border border-gray-300 rounded px-3 text-sm outline-none bg-white transition-all">
+                                className="h-8 border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all">
                                 <option value="" disabled>{t('select_option')}</option>
                                 {plans.map((plan) => 
                                     <option key={plan.code} value={plan.code}>{`${plan.name} (${plan.code.toUpperCase()})`}</option>
@@ -175,10 +168,10 @@ export default function Medical() {
                         </div>
 
                         <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-xs font-medium text-gray-600">{t('register_date')}</label>
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('register_date')}</label>
                             <div
                                 onClick={handleOpenCallendar} 
-                                className="flex items-center h-10 border border-gray-300 rounded px-3 bg-white focus-within:border-[#1e3a5f] focus-within:ring-1 focus-within:ring-[#1e3a5f]/20 transition-all cursor-pointer">
+                                className="flex items-center h-8 border border-gray-300 rounded px-3 bg-white focus-within:border-[#1e3a5f] focus-within:ring-1 focus-within:ring-[#1e3a5f]/20 transition-all cursor-pointer">
                                 <input
                                     ref={startDateRef}
                                     type="date"
@@ -232,7 +225,7 @@ export default function Medical() {
             </form>
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
+                    <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4 gap-2">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_health_ins')}</h1>
                             <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>

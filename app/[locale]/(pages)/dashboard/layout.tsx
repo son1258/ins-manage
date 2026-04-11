@@ -9,7 +9,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SideBar />
             <div className="flex flex-col flex-1 overflow-hidden">
                 <Navbar />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 pt-4">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 pt-20 md:pt-4">
                     {children}
                 </main>
             </div>
