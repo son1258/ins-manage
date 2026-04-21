@@ -5,16 +5,10 @@ export const callApi = async function (endpoint = '', method = 'GET', body = {},
 
     let headers: any = {
         "Content-Type": 'application/json',
-        // "Charset": "UTF-8",
-        // "Authorization": token ? 'Bearer ' + token: ''
     }
 
     if (token) {
         headers["Authorization"] = "Bearer " + token;
-    }
-
-    if (isFormData) {
-        headers['Content-Type'] = 'multipart/form-data'
     }
 
     const callApiData = async () => {

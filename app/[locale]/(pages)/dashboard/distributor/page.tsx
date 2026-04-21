@@ -16,6 +16,8 @@ import { disableDistributor, loadDistributors } from '@/services/distributorServ
 import { handleApiError } from '@/utils/errorHandler';
 import Modal from '@/components/Modal';
 import { toast } from 'react-toastify';
+import CustomSelect from '@/components/CustomSelect';
+import { loadProviders } from '@/services/providerService';
 
 export default function DistributorManagement() {
     const t = useTranslations();
@@ -29,6 +31,7 @@ export default function DistributorManagement() {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [pageSize, setPageSize] = useState(10);
+    const [providers, setProviders] = useState<any[]>([]);
     const [distributors, setDistributors] = useState<any[]>([]);
     const [openModal, setOpenModal] = useState(false);
     const [selectedId, setSelectedId] = useState('');
@@ -36,9 +39,10 @@ export default function DistributorManagement() {
     const listStatus = [
         {code: STATUS.ACTIVE, name: t('active')},
         {code: STATUS.DEACTIVE, name: t('deactive')},
-    ];  
+    ]
 
     const [formData, setFormData] = useState({
+        providerCode: "",
         distributorCode: "",
         distributorName: "",
         status: STATUS.ACTIVE,
@@ -75,6 +79,22 @@ export default function DistributorManagement() {
     const handleRefresh = () => {
         router.push(pathname);
     } 
+
+    const getProviders = async () => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadProviders(accessToken);
+            if (resp && resp.data) {
+                setProviders(resp.data);
+            }
+        } catch(err: any) {
+            console.log('Error get providers: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     const getDistributors = async (data: any) => {
         if (!accessToken) return;
@@ -132,7 +152,11 @@ export default function DistributorManagement() {
     }  
 
     useEffect(() => {
-        dispatch(setActiveTitle(t('collector')));
+        getProviders();
+    },[])
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t('distributor')));
         const code = searchParams.get('code') || "";
         const name = searchParams.get('name') || "";
         const status = searchParams.get('status');
@@ -140,6 +164,7 @@ export default function DistributorManagement() {
         const page = Number(searchParams.get('page')) || 1;
 
         const dataFromUrl = {
+            providerCode: "",
             distributorCode: code,
             distributorName: name,
             status: (status !== null && status !== "") ? Number(status) : STATUS.ACTIVE,
@@ -168,6 +193,21 @@ export default function DistributorManagement() {
                 <form onSubmit={handleSearch}>
                     <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mb-6">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
+                                    {t('agency_name')}
+                                </label>
+                                <CustomSelect
+                                    placeholder={t('select_option')}
+                                    value={formData.providerCode || undefined} 
+                                    onChange={(value) => handleValueChange("providerCode", value)}
+                                    options={providers.map((provider: any) => ({
+                                        value: provider.code,
+                                        label: `${provider.name} (${provider.code})`,
+                                    }))}
+                                />
+                            </div>
+
                             <InputGroup 
                                 label={t('distributor_code')}
                                 value={formData.distributorCode}
@@ -183,16 +223,15 @@ export default function DistributorManagement() {
                                 <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
                                     {t('status')}
                                 </label>
-                                <select
-                                    value={formData.status}
-                                    onChange={(e) => handleValueChange("status", e.target.value)}
-                                    className="border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all h-8"
-                                >
-                                    <option value="" disabled>{t('select_option')}</option>
-                                    {listStatus.map((status) => (
-                                        <option key={status.code} value={status.code}>{status.name}</option>
-                                    ))}
-                                </select>
+                                <CustomSelect
+                                    placeholder={t('select_option')}
+                                    value={formData.status} 
+                                    onChange={(value) => handleValueChange("status", value)}
+                                    options={listStatus.map((status: any) => ({
+                                        value: status.code,
+                                        label: status.name,
+                                    }))}
+                                />
                             </div>
                         </div>
 
@@ -222,6 +261,7 @@ export default function DistributorManagement() {
                                     <th className="px-4 py-3 border-r border-white text-center w-16">{t('index')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('distributor_code')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('distributor_name')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('agency_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('status')}</th>
                                     <th className="px-4 py-3 text-center">{t('action')}</th>
                                 </tr>
@@ -232,6 +272,7 @@ export default function DistributorManagement() {
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{item.code}</td>
                                         <td className="px-4 py-3 text-gray-700">{item.name}</td>
+                                        <td className="px-4 py-3 text-gray-700">{}</td>
                                         <td className="px-4 py-3">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
                                                 item.status === STATUS.ACTIVE

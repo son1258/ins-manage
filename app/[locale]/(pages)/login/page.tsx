@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { setUserInfo } from "@/lib/redux/slices/userSlice";
+import { login } from "@/services/userService";
 
 export default function Login() {
     const t = useTranslations();
@@ -55,16 +56,18 @@ export default function Login() {
 
         try {
             setIsloading(true);
-            const endpoint = 'user/login';
-            const dataReq = {
+            const data = {
                 username: formLogin.account,
                 password: formLogin.password
             }
-            const resp = await callApi(endpoint, 'POST', dataReq, 'v1');
-            if (resp) {
-                dispatch(setUserInfo({username: resp.data.username, role: resp.data.role}))
+            const resp = await login(data);
+            console.log(resp)
+            if (resp && resp.success) {
                 Cookies.set("userRole", resp.data.role, { path: '/' });
-                Cookies.set("accessToken", resp.data.access_token, {path: '/', expires: resp.data.expires_in});
+                Cookies.set("accessToken", resp.data.access_token, {
+                    path: '/',
+                    expires: resp.data.expires_in / 86400
+                });
                 router.push(`/${locale || 'vi'}/dashboard`);
             }
         } catch(err: any) {

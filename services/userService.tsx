@@ -27,3 +27,15 @@ export const loadCollectors = (params: any, token: string) => {
     const resp = callApi(url, 'GET', {}, 'v1', token);
     return resp;
 }
+
+export const login = (data: any) => {
+    const url = 'user/login';
+    const resp = callApi(url, 'POST', data, 'v1');
+    return resp;
+}
+
+export const loadUserById = (id: string, token: string) => {
+    let url = `users?id=${id}`;
+    const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
+}

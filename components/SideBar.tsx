@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { 
-    faChevronRight, faChevronLeft, faChevronDown, faLayerGroup,
-    faSyncAlt, faPlusCircle, faUserShield, faHeartbeat, faIdCard,
-    faFileInvoice, faShoppingCart, faChartLine, faSearch,
-    faInfoCircle, faSignOutAlt,
+    faChevronRight, faChevronLeft, faChevronDown, faShoppingCart, faChartLine,
+    faSignOutAlt,
     faTimes,
     faBars,
     faBuilding,
-    faUserTie
+    faUserTie,
+    faCashRegister
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocale, useTranslations } from 'next-intl';
 import Cookies from 'js-cookie';
@@ -47,7 +46,6 @@ export default function SideBar() {
     const locale = useLocale();
     const pathname = usePathname();
     const dispatch = useDispatch();
-    const activeTitle = useSelector((state: RootState) => state.menu.activeTitle);
     const [mount, setMount] = useState(false);
     const [userRole, setUserRole] = useState('sale');
     const [isExpanded, setIsExpanded] = useState(true);
@@ -56,76 +54,10 @@ export default function SideBar() {
 
     const navData: MenuData[] = [
         {
-            category: t("ctg_create_receipt").toUpperCase(),
-            items: [
-                { 
-                    icon: faLayerGroup,
-                    label: t('register_new'),
-                    hasSubMenu: true,
-                    isDropItem: true,
-                    allowedRoles: ['admin'],
-                    subMenuItems: [
-                        {
-                            label: t('medical_ins'),
-                            title: `${t('register_new')} ${t('medical_ins')}`,
-                            link: "register/medical/register"
-                        },
-                        {
-                            label: t('social_ins'),
-                            title: `${t('register_new')} ${t('social_ins')}`,
-                            link: "register/social/register"
-                        }
-                    ]
-                },
-                { 
-                    icon: faSyncAlt,
-                    label: t('renewal_new'), 
-                    hasSubMenu: true,
-                    isDropItem: true,
-                    allowedRoles: ['admin'],
-                    subMenuItems: [
-                        {
-                            label: t('medical_ins'),
-                            title: `${t('renewal_new')} ${t('medical_ins')}`,
-                            link: "renewal/medical/register"
-                        },
-                        {
-                            label: t('social_ins'), 
-                            title: `${t('renewal_new')} ${t('social_ins')}`, 
-                            link: "renewal/social/register"
-                        },
-                    ] 
-                },                
-                { 
-                    icon: faPlusCircle,
-                    label: t('other_declaration'),
-                    hasSubMenu: true,
-                    isDropItem: true,
-                    allowedRoles: ['admin'],
-                    subMenuItems: [
-                        {
-                            label: t('medical_ins'), 
-                            title: `${t('declaration')} ${t('medical_ins')}`, 
-                            link: "declaration/medical/register"
-                        },
-                        {
-                            label: t('social_ins'), 
-                            title: `${t('declaration')} ${t('social_ins')}`, 
-                            link: "declaration/social/register"
-                        }
-                    ] 
-                },
-            ]
-        },
-        {
             category: t("ctg_manager").toUpperCase(),
             items: [
-                { icon: faUserShield, label: t('social_ins'), link: "social", allowedRoles: ['admin', 'user'] },
-                { icon: faHeartbeat, label: t('medical_ins'), link: "medical", allowedRoles: ['admin', 'user'] },
-                { icon: faIdCard, label: t('other_declaration'), link: "orther-declaration", allowedRoles: ['admin'] },
-                { icon: faFileInvoice, label: t('e_receipt'), link: "e-receipt", allowedRoles: ['admin'] },
                 { icon: faBuilding, label: t('distributor'), link: "distributor", allowedRoles: ['admin', 'user'] },
-                { icon: faUserTie, label: t('collector'), link: "collector", allowedRoles: ['admin', 'user'] },
+                { icon: faCashRegister, label: t('collection'), link: "collection", allowedRoles: ['admin', 'user'] },
             ]
         },
         {
@@ -137,14 +69,7 @@ export default function SideBar() {
         {
             category: t("ctg_report").toUpperCase(),
             items: [
-                { icon: faChartLine, label: t('list_declaration'), link: "list-declaration", allowedRoles: ['admin'] },
-            ]
-        },
-        {
-            category: t("ctg_util").toUpperCase(),
-            items: [
-                { icon: faSearch, label: t('find'), link: "search", allowedRoles: ['admin'] },
-                { icon: faInfoCircle, label: t('instruct'), link: "instructions", allowedRoles: ['admin'] },
+                { icon: faChartLine, label: t('list_declaration'), link: "list-declaration", allowedRoles: ['admin', 'user'] },
             ]
         },
     ];
@@ -189,7 +114,7 @@ export default function SideBar() {
 
     return (
         <>
-            <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-[var(--global-main-color)] text-white z-[60] flex items-center px-4 shadow-md">
+            <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-[#926BFF] text-white z-[60] flex items-center px-4 shadow-md">
                 <button 
                     onClick={() => setIsMobileOpen(!isMobileOpen)}
                     className="p-2 bg-white text-[var(--global-main-color)] rounded shadow-lg"

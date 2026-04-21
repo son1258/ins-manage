@@ -8,34 +8,42 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
 import Pagination from '@/components/Pagination';
 import Loading from '@/components/Loading';
-import { callApi } from '@/services/callApi';
 import Cookies from 'js-cookie';
 import { STATUS } from '@/constants';
-import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { loadCollectors } from '@/services/userService';
+import CustomSelect from '@/components/CustomSelect';
+import { handleApiError } from '@/utils/errorHandler';
+import { loadDistributors } from '@/services/distributorService';
 
-export default function Collector() {
+export default function Collection() {
     const t = useTranslations();
     const locale = useLocale();
     const router = useRouter();
     const dispatch = useDispatch();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const accessToken = Cookies.get('accessToken');
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [isLoading, setIsLoading] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
+    const [distributors, setDistributors] = useState();
     const [collectors, setCollectors] = useState<any[]>([]);
 
     const listStatus = [
-        {code: 0, name: t('active')},
-        {code: 1, name: t('deactive')},
-    ];
+        {code: STATUS.ACTIVE, name: t('active')},
+        {code: STATUS.DEACTIVE, name: t('deactive')},
+    ];  
+
+    const listDistributors = [
+        {code: "ABC01A", name: 'BHXH cơ sở Tân Phú'},
+        {code: "ABC02B", name: 'BHXH  cơ sở Nhà Bè'},
+        {code: "ABC03C", name: 'BHXH  cơ sở Hóc Môn'},
+        {code: "ABC04D", name: 'BHXH cơ sở Tân Nhựt'},
+    ]
 
     const [formData, setFormData] = useState({
-        distributorName: "",
         distributorCode: "",
         collectorCode: "",
         collectorName: "",
@@ -43,7 +51,7 @@ export default function Collector() {
     })
 
     const createNew = () => {
-        router.push(`/${locale}/dashboard/collector/create-new`)
+        router.push(`/${locale}/dashboard/collection/create-new`)
     }
 
     const editCollector = (collector: any) => {
@@ -62,34 +70,28 @@ export default function Collector() {
     }
 
     const handleRefresh = () => {
-        setFormData({
-            distributorName: "",
-            distributorCode: "",
-            collectorCode: "",
-            collectorName: "",
-            status: ""
-        })
+        router.push(pathname);
     }
 
-    const getCollectors = async (data: any) => {
+    const getDistributors = async (data: any) => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
-            const resp = await loadCollectors(data, accessToken);
-            if (resp && resp.success) {
-                setCollectors(resp.data);
+            const resp = await loadDistributors(data, accessToken);
+            if (resp && resp.data) {
+                setDistributors(resp.data);
                 setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
-            console.log('Error get collectors : ', err);
-            toast.error(err.message);
-        } finally{
+            console.log('Error get distributors: ', err);
+            handleApiError(err, t);
+        } finally {
             setIsLoading(false);
         }
     }
 
     useEffect(() => {
-        dispatch(setActiveTitle(t('collector')));
+        dispatch(setActiveTitle(t('collection')));
         const code = searchParams.get('code') || "";
         const name = searchParams.get('name') || "";
         const status = searchParams.get('status');
@@ -107,18 +109,13 @@ export default function Collector() {
         setFormData(dataFromUrl);
         setPageSize(dataFromUrl.limit);
         setCurrentPage(dataFromUrl.page);
-        getCollectors(dataFromUrl);
+        getDistributors(dataFromUrl);
     },[searchParams])
-
-    useEffect(() => {
-        dispatch(setActiveTitle(t('collector')));
-        getCollectors();
-    }, [])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_collector')}</h2>
+                <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_collection')}</h2>
                 <button
                     onClick={createNew} 
                     className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-xs md:text-sm">
@@ -130,38 +127,42 @@ export default function Collector() {
                 <form onSubmit={handleSearch}>
                     <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
-                            <InputGroup 
-                                label={t('distributor_code')}
-                                value={formData.distributorCode}
-                                onChange={(e)=>handleValueChange("distributorCode", e.target.value)} 
-                            />
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
+                                    {t('distributor_code')}
+                                </label>
+                                <CustomSelect
+                                    placeholder={t('select_option')}
+                                    value={formData.distributorCode} 
+                                    onChange={(value) => handleValueChange("distributorCode", value)}
+                                    options={listDistributors.map((agency: any) => ({
+                                        value: agency.code,
+                                        label: `${agency.code}_${agency.name}`,
+                                    }))}
+                                />
+                            </div>
                              <InputGroup 
-                                label={t('distributor_name')}
-                                value={formData.distributorName}
-                                onChange={(e)=>handleValueChange("distributorName", e.target.value)} 
-                            />
-                             <InputGroup 
-                                label={t('collector_code')}
+                                label={t('collection_code')}
                                 value={formData.collectorCode}
                                 onChange={(e)=>handleValueChange("collectorCode", e.target.value)} 
                             />
                              <InputGroup 
-                                label={t('collector_name')}
+                                label={t('collection_name')}
                                 value={formData.collectorName}
                                 onChange={(e)=>handleValueChange("collectorName", e.target.value)} 
                             />
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium text-gray-600">{t('status')}</label>
-                                <select
-                                    value={formData.status}
-                                    onChange={(e)=>handleValueChange("declarationType", e.target.value)}
-                                    className="border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all h-8">
-                                    <option value="" disabled>{t('select_option')}</option>
-                                    {listStatus.map((status) => 
-                                        <option key={status.code} value={status.code}>{`${status.name}`}</option>
-                                    )}
-                                </select>
+                                <label className="text-sm font-medium mb-1 text-gray-600">{t('status')}</label>
+                                <CustomSelect
+                                    placeholder={t('select_option')}
+                                    value={formData.status} 
+                                    onChange={(value) => handleValueChange("status", value)}
+                                    options={listStatus.map((status: any) => ({
+                                        value: status.code,
+                                        label: status.name,
+                                    }))}
+                                />
                             </div>
                         </div>
 
@@ -189,8 +190,8 @@ export default function Collector() {
                             <thead>
                                 <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                     <th className="px-4 py-3 border-r border-white text-center w-16">{t('index')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('collector_code')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('collector_name')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('collection_code')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('collection_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('distributor_code')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('distributor_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('status')}</th>

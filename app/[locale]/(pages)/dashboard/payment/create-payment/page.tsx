@@ -5,25 +5,44 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import Pagination from '@/components/Pagination';
-import { setActiveTitle } from '@/lib/recoil/slices/menuSlice';
+import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useDispatch } from 'react-redux';
-import { setSelectedIds, setTotalAmount } from '@/lib/recoil/slices/paymentSlice';
+import { setSelectedIds, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
 import InputGroup from '@/components/InputGroup';
+import CustomSelect from '@/components/CustomSelect';
+import { PLANS } from '@/constants';
+import { usePathname, useRouter } from 'next/navigation';
+import DateRangePicker from '@/components/DateRangePicker';
 
 export default function CreatePaymentRequest() {
     const t = useTranslations();
+    const router = useRouter();
+    const pathname = usePathname();
     const dispatch = useDispatch();
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [plans, setPlans] = useState<any[]>([]);
     const [listDeclarationCode, setListDeclarationCode] = useState<string[]>([]);
-    const startDateRef = useRef<HTMLInputElement>(null);
-    const endDateRef = useRef<HTMLInputElement>(null);
+    const [selectedDeclaration, setSelectedDeclaration] = useState();
 
     const declarations = [
         {code: "bhxh", name: t('social_ins'), acronym: "bhxh"},
         {code: "bhythgd", name: t('family_health_ins'), acronym: "bhythgd"},
     ]
+
+    const plans = {
+        bhxh: [
+            {code: PLANS.NEXT_PAYMENT, name: t('next_payment')},
+            {code: PLANS.NEW, name: t('new')},
+            {code: PLANS.DECREASE, name: t('decrease')},
+            {code: PLANS.REPAY, name: t('repay')},
+            {code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment')},
+        ],
+        bhythgd: [
+            {code: PLANS.RENEWAL, name: t('renewal')},
+            {code: PLANS.NEW, name: t('new')},
+            {code: PLANS.DECREASE, name: t('decrease')},
+        ]
+    }
 
     const mockData = [
         { id: "8965742", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Minh Tiến", code: "7722528998", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "758.160", receipt: "Chưa in", status: "Đã ghi nhận" },
@@ -32,7 +51,7 @@ export default function CreatePaymentRequest() {
         { id: "8965741", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Minh Tiến", code: "7722528998", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "758.160", receipt: "Chưa in", status: "Đã ghi nhận" },
         { id: "8965738", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Đỗ Thanh Thủy", code: "7721214903", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "884.520", receipt: "Chưa in", status: "Đã ghi nhận" },
         { id: "8965727", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Bích Duyên", code: "7721380876", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "1.263.600", receipt: "Chưa in", status: "Đã ghi nhận" },
-        ];
+    ];
 
     const [formData, setFormData] = useState({
         declarationType: "",
@@ -40,51 +59,22 @@ export default function CreatePaymentRequest() {
         customerName: "",
         status: "",
         plan: "",
-        startDate: new Date(),
-        endDate: new Date()
+        fromDate: "",
+        toDate: ""
     });
 
-    const handleOpenCallendar = () => {
-        if (startDateRef.current) {
-            startDateRef.current.showPicker();
-        }
-    };
-
     const handleValueChange = (nameField: string, value: any) => {
+        if (nameField == 'declarationType') {
+            setSelectedDeclaration(value);
+        }
         setFormData(prev => ({
             ...prev,
             [nameField]: value
         }))
-        if (nameField == "declarationType") {
-            if (value == "bhxh") {
-                setPlans([
-                    {code: "DT", name: t('next_payment')},
-                    {code: "TM", name: t('new')},
-                    {code: "GH", name: t('decrease')},
-                    {code: "DL", name: t('repay')},
-                    {code: "DB  ", name: t('make_up_payment')},
-                ])
-            }
-            if (value == "bhythgd") {
-                setPlans([
-                    {code: "ON", name: t('renewal')},
-                    {code: "TM", name: t('new')},
-                    {code: "GH", name: t('decrease')},
-                ])
-            }
-        }
     }
 
     const handleRefresh = () => {
-        setFormData({
-            declarationType: "",
-            socialCode: "",
-            customerName: "",
-            status: "",
-            plan: "",
-            startDate: new Date(),
-            endDate: new Date()
-        });
+        router.push(pathname);
     }
 
     const indexOfLastItem = currentPage * pageSize;
@@ -138,15 +128,15 @@ export default function CreatePaymentRequest() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('type_declaration')}</label>
-                            <select
-                                value={formData.declarationType}
-                                onChange={(e)=>handleValueChange("declarationType", e.target.value)}
-                                className="h-8 border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all">
-                                <option value="" disabled>{t('select_option')}</option>
-                                {declarations.map((type) => 
-                                    <option key={type.code} value={type.code}>{`${type.name} (${type.acronym.toUpperCase()})`}</option>
-                                )}
-                            </select>
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={formData.declarationType || undefined} 
+                                onChange={(value) => handleValueChange("declarationType", value)}
+                                options={declarations.map((type) => ({
+                                    value: type.code,
+                                    label: `${type.name} (${type.acronym.toUpperCase()})`,
+                                }))}
+                            />
                         </div>
 
                         <InputGroup 
@@ -163,56 +153,27 @@ export default function CreatePaymentRequest() {
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('plan')}</label>
-                            <select
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={formData.declarationType || undefined} 
+                                onChange={(value) => handleValueChange("declarationType", value)}
+                                options={(selectedDeclaration == 'bhxh' ? plans.bhxh : plans.bhythgd).map((plan) => ({
+                                    value: plan.code,
+                                    label: plan.name,
+                                }))}
                                 disabled={formData.declarationType == ""}
-                                value={formData.plan}
-                                onChange={(e)=>handleValueChange("plan", e.target.value)}
-                                className={`h-8 border border-gray-300 rounded px-2 py-1.5 text-sm ${formData.declarationType == "" ? 'bg-gray-300' : ' bg-white'}
-                                    outline-none transition-all`}>
-                                <option value="" disabled>{t('select_option')}</option>
-                                {plans.map((plan) => 
-                                    <option key={plan.code} value={plan.code}>{`${plan.name} (${plan.code.toUpperCase()})`}</option>
-                                )}
-                            </select>
+                                className={`${formData.declarationType == "" ? 'bg-gray-300' : ' bg-white'}`}
+                            />
                         </div>
 
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-sm mb-1 font-medium text-gray-600">{t('register_date')}</label>
-                            <div
-                                onClick={handleOpenCallendar} 
-                                className="flex items-center h-8 border border-gray-300 rounded px-2 py-1.5 bg-white focus-within:border-[#1e3a5f] focus-within:ring-1 focus-within:ring-[#1e3a5f]/20 transition-all cursor-pointer">
-                                <input
-                                    ref={startDateRef}
-                                    type="date"
-                                    className="native-date-input flex-1"
-                                    value={formData.startDate ? formData.startDate.toISOString().split('T')[0] : ""}
-                                    onChange={(e) => {
-                                        const date = e.target.value ? new Date(e.target.value) : null;
-                                        handleValueChange("startDate", date);
-                                        if (date && endDateRef.current) {
-                                            setTimeout(() => endDateRef.current?.showPicker(), 100);
-                                        }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-
-                                <span className="mx-2 text-gray-400 text-xs font-bold">→</span>
-
-                                <input
-                                    ref={endDateRef}
-                                    type="date"
-                                    className="native-date-input flex-1"
-                                    value={formData.endDate ? formData.endDate.toISOString().split('T')[0] : ""}
-                                    min={formData.startDate ? formData.startDate.toISOString().split('T')[0] : ""}
-                                    onChange={(e) => handleValueChange("endDate", e.target.value ? new Date(e.target.value) : null)}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-
-                                <div className="ml-2 text-gray-400 text-sm">
-                                    <FontAwesomeIcon icon={faCalendarAlt} />
-                                </div>
-                            </div>
-                        </div>
+                        <DateRangePicker
+                            label={t('register_date')}
+                            fromDate={formData.fromDate}
+                            toDate={formData.toDate}
+                            fieldFrom="fromDate"
+                            fieldTo="toDate"
+                            onChange={handleValueChange}
+                        />
                     </div>
 
                     <div className="flex justify-end items-center gap-4 pt-2">

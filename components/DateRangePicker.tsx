@@ -4,7 +4,6 @@ import { DatePicker, ConfigProvider } from "antd";
 import dayjs from "dayjs";
 import locale from "antd/locale/vi_VN";
 import "dayjs/locale/vi";
-import { useTranslations } from "next-intl";
 
 const { RangePicker } = DatePicker;
 
@@ -12,35 +11,47 @@ interface Props {
     label?: string;
     fromDate?: any;
     toDate?: any;
-    onChange?: (field: "fromDate" | "toDate", value: any) => void;
+    fieldFrom?: any;
+    fieldTo?: any;
+    onChange?: (field: string, value: any) => void;
+    picker?: "date" | "month" | "year"; 
     required?: boolean;
     readOnly?: boolean;
     className?: string;
 }
 
-export default function DateRangePickerAntd ({
+export default function DateRangePicker({
     label,
     fromDate,
     toDate,
+    fieldFrom,
+    fieldTo,
     onChange,
+    picker = "date",
     required = false,
     readOnly = false,
     className = "",
 }: Props) {
-    const t = useTranslations();
-    const value: [any, any] = [
+    const formatMap = {
+        date: "YYYY-MM-DD",
+        month: "YYYY-MM",
+        year: "YYYY",
+    };
+
+    const value = [
         fromDate ? dayjs(fromDate) : null,
         toDate ? dayjs(toDate) : null,
     ];
 
     const handleRangeChange = (dates: any) => {
         if (!dates) {
-            onChange?.("fromDate", null);
-            onChange?.("toDate", null);
-            return;
+        onChange?.(fieldFrom, null);
+        onChange?.(fieldTo, null);
+        return;
         }
-        onChange?.("fromDate", dates[0].format("YYYY-MM-DD"));
-        onChange?.("toDate", dates[1].format("YYYY-MM-DD"));
+        const format = formatMap[picker];
+        onChange?.(fieldFrom, dates[0]?.format(format));
+        onChange?.(fieldTo, dates[1]?.format(format));
     };
 
     return (
@@ -54,13 +65,14 @@ export default function DateRangePickerAntd ({
                 )}
 
                 <RangePicker
-                    value={value}
+                    picker={picker}
+                    value={value as any}
                     onChange={handleRangeChange}
                     disabled={readOnly}
                     format="DD/MM/YYYY"
-                    className="w-full h-8 custom-range-picker" 
+                    className="w-full h-8 custom-range-picker"
                 />
             </div>
         </ConfigProvider>
     );
-};
+}

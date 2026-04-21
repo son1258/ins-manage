@@ -7,14 +7,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-export default function DetailSocial() {
+export default function DeclarationDetail() {
     const t = useTranslations();
     const [isAddMember, setIsAddMember] = useState(false);
 
     const [formData, setFormData] = useState({
         socialCode: "",
         fullname: "",
-        createDate: new Date(),
+        createDate: "",
         hasCard: 0,
         nic: "",
         ethnicity: "",

@@ -7,18 +7,21 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
-import { callApi } from "@/services/callApi";
 import Loading from "@/components/Loading";
 import { handleApiError } from "@/utils/errorHandler";
 import { createDistributor } from "@/services/distributorService";
+import CustomSelect from "@/components/CustomSelect";
+import { loadProviders } from "@/services/providerService";
 
 export default function CreateNewDistributor() {
     const t = useTranslations();
     const dispatch = useDispatch();
     const accessToken = Cookies.get('accessToken');
-    const [isLoading, setIsloading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [providers, setProviders] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
+        providerId: "",
         distributorCode: "",
         distributorName: ""
     });
@@ -40,8 +43,25 @@ export default function CreateNewDistributor() {
         }));
     }
 
+    const getProviders = async () => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadProviders(accessToken);
+            if (resp && resp.data) {
+                setProviders(resp.data);
+            }
+        } catch(err: any) {
+            console.log('Error get providers: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     const resetForm = () => {
         setFormData({
+            providerId: "",
             distributorCode: "",
             distributorName: ""
         });
@@ -55,8 +75,9 @@ export default function CreateNewDistributor() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            setIsloading(true);
+            setIsLoading(true);
             const data = {
+                provider_id: formData.providerId,
                 code: formData.distributorCode,
                 name: formData.distributorName
             }
@@ -70,12 +91,13 @@ export default function CreateNewDistributor() {
             console.log('Error create distributor:', err.message);
             handleApiError(err, t);
         } finally {
-            setIsloading(false);
+            setIsLoading(false);
         }
     }
 
     useEffect(() => {
-        dispatch(setActiveTitle(t('add_distributor')))
+        dispatch(setActiveTitle(t('add_distributor')));
+        getProviders();
     },[])
 
     return (
@@ -86,7 +108,19 @@ export default function CreateNewDistributor() {
                 </div>
                 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('social_ins_authority')}</label>
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={formData.providerId || undefined} 
+                                onChange={(value) => handleValueChange("providerId", value)}
+                                options={providers.map((provider: any) => ({
+                                    value: provider.id,
+                                    label: `${provider.name} (${provider.code})`,
+                                }))}
+                            />
+                        </div>
                         <InputGroup 
                             label={t('distributor_code')}
                             value={formData.distributorCode}
