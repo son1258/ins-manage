@@ -11,7 +11,7 @@ interface CollectorForm {
     unit: any;
 }
 
-export default function UserProfile() {
+export default function EditColection() {
     const t = useTranslations();
 
     const listUnits = [
@@ -57,13 +57,13 @@ export default function UserProfile() {
                             <div className="p-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <InputGroup 
-                                        label={t('fullname')} 
+                                        label={t('collection_name')} 
                                         value={formCollector.fullname}
                                         onChange={(e) => handleValueChange("fullname", e.target.value)}
                                         required 
                                     />
                                     <InputGroup 
-                                        label={t('collector_code')} 
+                                        label={t('collection_code')} 
                                         value={formCollector.code} 
                                         onChange={(e) => handleValueChange("code", e.target.value)}
                                         readOnly 

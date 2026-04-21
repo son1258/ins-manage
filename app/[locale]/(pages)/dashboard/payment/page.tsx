@@ -1,21 +1,24 @@
 "use client"
 
-import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileAlt, faFileImport, faFileExport, faCalendarAlt, faPaperPlane, faCirclePlus} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileAlt, faFileImport, faFileExport, faCalendarAlt, faPaperPlane, faCirclePlus, faQrcode, faChevronRight, faChevronDown} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
 import Pagination from '@/components/Pagination';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
+import React from 'react';
+import CustomSelect from '@/components/CustomSelect';
+import DateRangePicker from '@/components/DateRangePicker';
 
 export default function Payment() {
     const t = useTranslations();
     const router = useRouter();
     const locale = useLocale();
+    const pathname = usePathname();
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const startDateRef = useRef<HTMLInputElement>(null);
-    const endDateRef = useRef<HTMLInputElement>(null);
+    const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
     const status = [
         {code: "01", name: t('recorded')},
@@ -29,26 +32,52 @@ export default function Payment() {
     ]
 
     const mockData = [
-        { id: "8965742", staff: "VŨ THỊ NHẬT LINH", amount: "758.160", status: 1, create_date: "09/04/2026", payment_date: "" },
-        { id: "8965733", staff: "VŨ THỊ NHẬT LINH", amount: "884.520", status: 6, create_date: "08/04/2026", payment_date:"08/04/2026" },
-        { id: "8965722", staff: "VŨ THỊ NHẬT LINH", amount: "1.263.600", status: 6, create_date: "07/04/2026", payment_date: "07/04/2026" }
+        { 
+            id: "8965743", 
+            staff: "VŨ THỊ NHẬT LINH", 
+            amount: "27.736.020", 
+            status: 0, 
+            create_date: "21/04/2026", 
+            payment_date: "",
+            details: [
+                { id: "9109764", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "3121123126", name: "Hồ Xuân Cường", price: "315.900", date: "21/04/2026" },
+                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
+                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
+            ]
+        },
+        { 
+            id: "8965742", 
+            staff: "VŨ THỊ NHẬT LINH", 
+            amount: "40.141.231", 
+            status: 1, 
+            create_date: "09/04/2026", 
+            payment_date: "09/04/2026",
+            details: [
+                { id: "9107001", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "123456789", name: "Nguyễn Văn A", price: "758.160", date: "09/04/2026" },
+                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
+                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
+                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
+                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
+                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
+                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
+                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
+            ]
+        }
     ];
 
     const [formData, setFormData] = useState({
-        declarationType: "",
-        socialCode: "",
-        customerName: "",
+        paymentCode: "",
         status: "",
-        plan: "",
-        startDate: new Date(),
-        endDate: new Date()
+        fromDate: "",
+        toDate: ""
     });
-
-    const handleOpenCallendar = () => {
-        if (startDateRef.current) {
-            startDateRef.current.showPicker();
-        }
-    };
 
     const handleValueChange = (nameField: string, value: any) => {
         setFormData(prev => ({
@@ -57,16 +86,12 @@ export default function Payment() {
         }))
     }
 
+    const toggleRow = (id: string) => {
+        setExpandedRow(expandedRow === id ? null : id);
+    };
+
     const handleRefresh = () => {
-        setFormData({
-            declarationType: "",
-            socialCode: "",
-            customerName: "",
-            status: "",
-            plan: "",
-            startDate: new Date(),
-            endDate: new Date()
-        });
+        router.push(pathname);
     }
 
     const indexOfLastItem = currentPage * pageSize;
@@ -86,83 +111,49 @@ export default function Payment() {
         <div className="flex flex-col gap-3 text-black">
             <form onSubmit={handleSearch}>
                 <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
-                    <h2 className="text-lg font-semibold mb-4 text-[#1e3a5f] uppercase text-sm tracking-wide">
-                        {t('search')}
-                    </h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mb-6">
                         <InputGroup 
                             label={t('payment_request_id')}
-                            value={formData.socialCode}
-                            onChange={(e)=>handleValueChange("socialCode", e.target.value)}
+                            value={formData.paymentCode}
+                            onChange={(e)=>handleValueChange("paymentCode", e.target.value)}
                         />
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
                                 {t('status')}
                             </label>
-                            <select
-                                value={formData.status}
-                                onChange={(e) => handleValueChange("status", e.target.value)}
-                                className="border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all h-8"
-                            >
-                                <option value="" disabled>{t('select_option')}</option>
-                                {status.map((status) => (
-                                    <option key={status.code} value={status.code}>{status.name}</option>
-                                ))}
-                            </select>
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={formData.status} 
+                                onChange={(value) => handleValueChange("status", value)}
+                                options={status.map((status: any) => ({
+                                    value: status.code,
+                                    label: status.name,
+                                }))}
+                            />
                         </div>
-
-                        <div className="flex flex-col gap-1.5 md:col-span-2">
-                            <label className="text-sm font-medium mb-1 text-gray-600">{t('register_date')}</label>
-                            <div
-                                onClick={handleOpenCallendar} 
-                                className="flex items-center h-8 border border-gray-300 rounded px-3 bg-white focus-within:border-[#1e3a5f] focus-within:ring-1 focus-within:ring-[#1e3a5f]/20 transition-all cursor-pointer">
-                                <input
-                                    ref={startDateRef}
-                                    type="date"
-                                    className="native-date-input flex-1"
-                                    value={formData.startDate ? formData.startDate.toISOString().split('T')[0] : ""}
-                                    onChange={(e) => {
-                                        const date = e.target.value ? new Date(e.target.value) : null;
-                                        handleValueChange("startDate", date);
-                                        if (date && endDateRef.current) {
-                                            setTimeout(() => endDateRef.current?.showPicker(), 100);
-                                        }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-
-                                <span className="mx-2 text-gray-400 text-xs font-bold">→</span>
-
-                                <input
-                                    ref={endDateRef}
-                                    type="date"
-                                    className="native-date-input flex-1"
-                                    value={formData.endDate ? formData.endDate.toISOString().split('T')[0] : ""}
-                                    min={formData.startDate ? formData.startDate.toISOString().split('T')[0] : ""}
-                                    onChange={(e) => handleValueChange("endDate", e.target.value ? new Date(e.target.value) : null)}
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-
-                                <div className="ml-2 text-gray-400 text-sm">
-                                    <FontAwesomeIcon icon={faCalendarAlt} />
-                                </div>
-                            </div>
-                        </div>
+                        
+                        <DateRangePicker
+                            label={t('register_date')}
+                            fromDate={formData.fromDate}
+                            toDate={formData.toDate}
+                            fieldFrom="fromDate"
+                            fieldTo="toDate"
+                            onChange={handleValueChange}
+                        />
                     </div>
 
                     <div className="flex justify-end items-center gap-4 pt-2">
                         <button
                             type="button"
                             onClick={handleRefresh} 
-                            className="flex items-center text-gray-500 text-xs hover:text-[#f37021] transition-colors font-medium cursor-pointer">
+                            className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                             <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                             {t('refresh')}
                         </button>
                         <button
                             type="submit" 
-                            className="flex items-center bg-[#1e3a5f] border border-[#1e3a5f] text-white px-2 py-1 rounded hover:bg-[#152944] transition-all text-sm font-semibold shadow-sm cursor-pointer">
+                            className="flex items-center bg-gray-800 border border-gray-800 text-white px-2 py-1 rounded transition-all text-sm font-semibold shadow-sm cursor-pointer">
                             <FontAwesomeIcon icon={faSearch} className="mr-2 w-3 h-3" />
                             {t('search')}
                         </button>
@@ -173,8 +164,8 @@ export default function Payment() {
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
-                            <h1 className="font-bold text-gray-800 text-sm">{t('list_health_ins')}</h1>
-                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
+                            <h1 className="font-bold text-gray-800 text-sm">{t('list_payment_request')}</h1>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
                         </div>
                         
                         <div className="flex gap-2">
@@ -183,7 +174,7 @@ export default function Payment() {
                             </button>
                             <button 
                                 onClick={handlePaymentRequest}
-                                className="flex items-center gap-2 bg-[#1e3a5f] text-white px-2 py-1 text-xs cursor-pointer">
+                                className="flex items-center gap-2 bg-gray-800 text-white px-2 py-1 text-xs cursor-pointer">
                                 <FontAwesomeIcon icon={faCirclePlus} />{t('create_payment_request')}
                             </button>
                         </div>
@@ -194,34 +185,80 @@ export default function Payment() {
                             <table className="w-full text-[13px] text-left border-collapse">
                                 <thead>
                                     <tr className="bg-[#1e3a5f] text-white whitespace-nowrap">
-                                        <th className="px-4 py-3 font-semibold border-r border-white text-center">{t('payment_request_id')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('creator')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('total_amount')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('status')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('create_date')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('payment_date')}</th>
-                                        <th className="px-4 py-3 font-semibold text-center"></th>
+                                        <th className="px-4 py-3 w-10"></th>
+                                        <th className="px-4 py-3 border-r border-white/20 text-center">{t('payment_request_id')}</th>
+                                        <th className="px-4 py-3 border-r border-white/20">{t('creator')}</th>
+                                        <th className="px-4 py-3 border-r border-white/20">{t('total_amount')}</th>
+                                        <th className="px-4 py-3 border-r border-white/20 text-center">{t('status')}</th>
+                                        <th className="px-4 py-3 border-r border-white/20">{t('create_date')}</th>
+                                        <th className="px-4 py-3 border-r border-white/20">{t('payment_date')}</th>
+                                        <th className="px-4 py-3 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {currentTableData.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
-                                            <td className="px-4 py-3 text-blue-600 font-medium text-center">{row.id}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.staff}</td>
-                                            <td className="px-4 py-3 text-teal-600 font-bold">{row.amount}</td>
-                                            <td className="text-center">
-                                                <span className={`${row.status == 1 ? "bg-amber-400" : "bg-blue-400"} px-3 py-1 text-white rounded-full whitespace-nowrap`}>
-                                                    {row.status == 1 ? t("not_paid") : t("paid")}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">{row.create_date}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.payment_date}</td>
-                                            <td className="px-4 py-3 text-center text-gray-400 space-x-2 whitespace-nowrap">
-                                                <button className="hover:text-blue-600"><FontAwesomeIcon icon={faEdit} /></button>
-                                                <button className="hover:text-red-600"><FontAwesomeIcon icon={faPaperPlane} /></button>
-                                                <button className="hover:text-gray-800"><FontAwesomeIcon icon={faPrint} /></button>
-                                            </td>
-                                        </tr>
+                                    {mockData.map((row) => (
+                                        <React.Fragment key={row.id}>
+                                            <tr 
+                                                className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === row.id ? 'bg-blue-50/50' : ''}`}
+                                                onClick={() => toggleRow(row.id)}
+                                            >
+                                                <td className="px-4 py-3 text-center">
+                                                    <FontAwesomeIcon 
+                                                        icon={expandedRow === row.id ? faChevronDown : faChevronRight} 
+                                                        className="text-gray-400 text-xs"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center">{row.id}</td>
+                                                <td className="px-4 py-3 text-gray-600">{row.staff}</td>
+                                                <td className="px-4 py-3 text-teal-600 font-bold">{row.amount}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`${row.status === 0 ? "bg-amber-400" : "bg-blue-500"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
+                                                        {row.status === 0 ? "Chưa thanh toán" : "Đã thanh toán"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">{row.create_date}</td>
+                                                <td className="px-4 py-3 text-gray-600">{row.payment_date || "-"}</td>
+                                                <td className="px-4 py-3 text-center text-gray-400 space-x-3">
+                                                    <button className="hover:text-blue-600"><FontAwesomeIcon icon={faQrcode} /></button>
+                                                    {row.status === 0 && <button className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} /></button>}
+                                                </td>
+                                            </tr>
+
+                                            {expandedRow === row.id && (
+                                                <tr>
+                                                    <td colSpan={8} className="bg-orange-50/30 p-0">
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-[12px] border-t border-orange-100">
+                                                                <thead>
+                                                                    <tr className="text-gray-500 font-semibold border-b border-orange-100">
+                                                                        <th className="pl-14 py-2">Mã YCTT</th>
+                                                                        <th className="px-4 py-2">Nhân viên thu</th>
+                                                                        <th className="px-4 py-2">Loại hồ sơ</th>
+                                                                        <th className="px-4 py-2">Mã số BHXH</th>
+                                                                        <th className="px-4 py-2">Họ tên</th>
+                                                                        <th className="px-4 py-2 text-right">Số tiền</th>
+                                                                        <th className="px-4 py-2 text-center">Ngày đăng ký</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {row.details.map((detail) => (
+                                                                        <tr key={detail.id} className="border-b border-orange-50 last:border-0">
+                                                                            <td className="pl-14 py-2 text-blue-600">{detail.id}</td>
+                                                                            <td className="px-4 py-2">{detail.staff}</td>
+                                                                            <td className="px-4 py-2">{detail.type}</td>
+                                                                            <td className="px-4 py-2 font-mono">{detail.bhxh_code}</td>
+                                                                            <td className="px-4 py-2 font-medium">{detail.name}</td>
+                                                                            <td className="px-4 py-2 text-right text-teal-600 font-bold">{detail.price}</td>
+                                                                            <td className="px-4 py-2 text-center">{detail.date}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))}
                                 </tbody>
                             </table>

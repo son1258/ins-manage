@@ -1,6 +1,3 @@
-import { faCopy } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
 interface Props {
     label: string;
     value: any;
