@@ -1,19 +1,19 @@
 import axios from "axios";
 
 export const callApi = async function (endpoint = '', method = 'GET', body = {}, version = '', token = '', isFormData = false) {
-    let API_URL = process.env.NEXT_PUBLIC_BASE_URL + '/' + (version ? version : 'v1')
+    let API_URL = process.env.NEXT_PUBLIC_BASE_URL + '/api/' + (version ? version : 'v1');
 
-    if (endpoint.charAt(0) == '/') {
-        endpoint = endpoint.substring(1);
-    }
-
-    let headers = {
+    let headers: any = {
         "Content-Type": 'application/json',
-        "Charset": "UTF-8",
-        "Authorization": token ? 'Bearer ' + token: ''
+        // "Charset": "UTF-8",
+        // "Authorization": token ? 'Bearer ' + token: ''
     }
 
-    if(isFormData) {
+    if (token) {
+        headers["Authorization"] = "Bearer " + token;
+    }
+
+    if (isFormData) {
         headers['Content-Type'] = 'multipart/form-data'
     }
 

@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --global-main-color: #926BFF;
+  --global-hover-color: #5e29f2;
 }
 
 @theme inline {
@@ -36,15 +38,27 @@ body {
 
 input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-calendar-picker-indicator {
-    display: none;
-    -webkit-appearance: none;
+  display: none;
+  -webkit-appearance: none;
 }
 
 .native-date-input {
-    background: transparent;
-    border: none;
-    outline: none;
-    width: 100%;
-    font-size: 0.875rem;
-    color: #374151;
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.custom-range-picker.ant-picker {
+  border: 1px solid #d1d5db !important;
+  box-shadow: none !important;
+  border-radius: 4px;
+}
+
+.custom-range-picker:hover,
+.custom-range-picker.ant-picker-focused {
+  border: 1px solid #d1d5db !important;
+  box-shadow: none !important;
 }

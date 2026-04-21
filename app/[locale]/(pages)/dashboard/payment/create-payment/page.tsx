@@ -5,9 +5,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import Pagination from '@/components/Pagination';
-import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
+import { setActiveTitle } from '@/lib/recoil/slices/menuSlice';
 import { useDispatch } from 'react-redux';
-import { setSelectedIds, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
+import { setSelectedIds, setTotalAmount } from '@/lib/recoil/slices/paymentSlice';
 import InputGroup from '@/components/InputGroup';
 
 export default function CreatePaymentRequest() {

@@ -32,7 +32,7 @@ const InputGroup = ({
             <input
                 type={type}
                 onChange={onChange}
-                defaultValue={value}
+                value={value}
                 placeholder={placeholder}
                 readOnly={readOnly}
                 className={`border rounded px-2 py-1.5 text-sm outline-none transition-all h-8

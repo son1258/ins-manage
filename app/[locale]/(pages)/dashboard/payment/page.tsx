@@ -86,10 +86,6 @@ export default function Payment() {
         <div className="flex flex-col gap-3 text-black">
             <form onSubmit={handleSearch}>
                 <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
-                    <h2 className="text-lg font-semibold mb-4 text-[#1e3a5f] uppercase text-sm tracking-wide">
-                        {t('search')}
-                    </h2>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
                         <InputGroup 
                             label={t('payment_request_id')}
@@ -156,13 +152,13 @@ export default function Payment() {
                         <button
                             type="button"
                             onClick={handleRefresh} 
-                            className="flex items-center text-gray-500 text-xs hover:text-[#f37021] transition-colors font-medium cursor-pointer">
+                            className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                             <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                             {t('refresh')}
                         </button>
                         <button
                             type="submit" 
-                            className="flex items-center bg-[#1e3a5f] border border-[#1e3a5f] text-white px-2 py-1 rounded hover:bg-[#152944] transition-all text-sm font-semibold shadow-sm cursor-pointer">
+                            className="flex items-center bg-gray-800 border border-gray-800 text-white px-2 py-1 rounded transition-all text-sm font-semibold shadow-sm cursor-pointer">
                             <FontAwesomeIcon icon={faSearch} className="mr-2 w-3 h-3" />
                             {t('search')}
                         </button>
@@ -174,7 +170,7 @@ export default function Payment() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_health_ins')}</h1>
-                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
                         </div>
                         
                         <div className="flex gap-2">
@@ -183,7 +179,7 @@ export default function Payment() {
                             </button>
                             <button 
                                 onClick={handlePaymentRequest}
-                                className="flex items-center gap-2 bg-[#1e3a5f] text-white px-2 py-1 text-xs cursor-pointer">
+                                className="flex items-center gap-2 bg-gray-800 text-white px-2 py-1 text-xs cursor-pointer">
                                 <FontAwesomeIcon icon={faCirclePlus} />{t('create_payment_request')}
                             </button>
                         </div>
@@ -193,20 +189,20 @@ export default function Payment() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-[13px] text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-[#1e3a5f] text-white whitespace-nowrap">
-                                        <th className="px-4 py-3 font-semibold border-r border-white text-center">{t('payment_request_id')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('creator')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('total_amount')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('status')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('create_date')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('payment_date')}</th>
-                                        <th className="px-4 py-3 font-semibold text-center"></th>
+                                    <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
+                                        <th className="px-4 py-3 border-r border-white text-center">{t('payment_request_id')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('creator')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('total_amount')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('status')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('create_date')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('payment_date')}</th>
+                                        <th className="px-4 py-3 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {currentTableData.map((row, idx) => (
                                         <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
-                                            <td className="px-4 py-3 text-blue-600 font-medium text-center">{row.id}</td>
+                                            <td className="px-4 py-3 text-[var(--global-main-color)] font-medium text-center">{row.id}</td>
                                             <td className="px-4 py-3 text-gray-600">{row.staff}</td>
                                             <td className="px-4 py-3 text-teal-600 font-bold">{row.amount}</td>
                                             <td className="text-center">

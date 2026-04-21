@@ -1,21 +1,22 @@
 "use client"
 
 import InputGroup from '@/components/InputGroup';
+import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
-
+import { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 
 interface CollectorProps {
     collectorCode: string,
     username: string,
     password: string,
     status: number,
-    unit: any
+    distributor: any
 }
 
 export default function CreateCollector() {
     const t = useTranslations();
-
+    const dispatch = useDispatch();
     const listUnits = [
         {code: "BIPV01U", name: "PVI Thành phố Hồ Chí Minh", status: 0},
         {code: "BIPV012", name: "PVI Thành phố Thủ Đức", status: 1},
@@ -26,7 +27,7 @@ export default function CreateCollector() {
         username: "",
         password: "",
         status: 1,
-        unit: {}
+        distributor: {}
     });
 
     const handleValueChange = (nameField: string, value: any) => {
@@ -35,6 +36,12 @@ export default function CreateCollector() {
             [nameField]: value
         }))
     }
+
+
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t('add_collector')))
+    },[])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">

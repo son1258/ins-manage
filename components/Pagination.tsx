@@ -52,7 +52,8 @@ const Pagination = ({
                 <button 
                     disabled={currentPage === 1}
                     onClick={() => onPageChange(currentPage - 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400
+                    hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <FontAwesomeIcon icon={faChevronLeft} className="w-2.5 h-2.5" />
                 </button>
@@ -62,10 +63,8 @@ const Pagination = ({
                         <button
                             key={idx}
                             onClick={() => onPageChange(page)}
-                            className={`w-8 h-8 flex items-center justify-center rounded text-sm font-medium transition-all ${
-                                currentPage === page 
-                                ? 'bg-[#1e3a5f] text-white shadow-md' 
-                                : 'text-gray-600 hover:bg-gray-100 border border-transparent'
+                            className={`w-8 h-8 flex items-center justify-center rounded text-sm font-medium transition-all cursor-pointer
+                            ${currentPage === page ? 'bg-gray-800 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 border border-transparent'
                             }`}
                         >
                             {page}
@@ -78,7 +77,8 @@ const Pagination = ({
                 <button 
                     disabled={currentPage === totalPages}
                     onClick={() => onPageChange(currentPage + 1)}
-                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 
+                    hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <FontAwesomeIcon icon={faChevronRight} className="w-2.5 h-2.5" />
                 </button>

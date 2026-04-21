@@ -89,10 +89,6 @@ export default function Social() {
         <div className="flex flex-col gap-3 text-black pb-4">
             <form onSubmit={handleSearch}>
                 <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
-                    <h2 className="text-lg font-semibold mb-4 text-[#1e3a5f] uppercase text-sm tracking-wide">
-                        {t('search')}
-                    </h2>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
                         <InputGroup 
                             label={t('social_code')} 
@@ -174,13 +170,13 @@ export default function Social() {
                         <button
                             type="button"
                             onClick={handleRefresh} 
-                            className="flex items-center text-gray-500 text-xs hover:text-[#f37021] transition-colors font-medium cursor-pointer">
+                            className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                             <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                             {t('refresh')}
                         </button>
                         <button
                             type="submit" 
-                            className="flex items-center bg-[#1e3a5f] border border-[#1e3a5f] text-white px-2 py-1 rounded hover:bg-[#152944] transition-all text-sm font-semibold shadow-sm cursor-pointer">
+                            className="flex items-center bg-gray-800 border border-gray-800 text-white px-2 py-1 rounded transition-all text-sm font-semibold shadow-sm cursor-pointer">
                             <FontAwesomeIcon icon={faSearch} className="mr-2 w-3 h-3" />
                             {t('search')}
                         </button>
@@ -192,7 +188,7 @@ export default function Social() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4 gap-2">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_social_ins')}</h1>
-                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
                         </div>
                         
                         <div className="flex gap-2">
@@ -202,7 +198,7 @@ export default function Social() {
                             <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 transition-colors">
                                 <FontAwesomeIcon icon={faFileImport} />{t('import_excel')}
                             </button>
-                            <button className="flex items-center gap-2 px-3 py-1.5 bg-[#1e3a5f] text-white rounded text-xs hover:bg-[#2a5285] transition-colors">
+                            <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 text-white rounded text-xs transition-colors">
                                 <FontAwesomeIcon icon={faFileExport} />{t('export_excel')}
                             </button>
                         </div>
@@ -212,24 +208,24 @@ export default function Social() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-[13px] text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-[#1e3a5f] text-white whitespace-nowrap">
-                                        <th className="px-4 py-3 font-semibold border-r border-white text-center">{t('declaration_code')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('collector')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('participant_name')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('social_code')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('plan')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('register_date')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white">{t('commission_type')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white text-right">{t('contribution_amount')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white text-center">{t('temporary_receipt')}</th>
-                                        <th className="px-4 py-3 font-semibold border-r border-white text-left">{t('status')}</th>
-                                        <th className="px-4 py-3 font-semibold text-center"></th>
+                                    <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
+                                        <th className="px-4 py-3 border-r border-white text-center">{t('declaration_code')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('collector')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('participant_name')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('social_code')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('plan')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('register_date')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('commission_type')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-right">{t('contribution_amount')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-center">{t('temporary_receipt')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-left">{t('status')}</th>
+                                        <th className="px-4 py-3 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {currentTableData.map((row, idx) => (
                                         <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
-                                            <td className="px-4 py-3 text-blue-600 font-medium text-center">
+                                            <td className="px-4 py-3 text-[var(--global-main-color)] font-medium text-center">
                                                 <Link href={`/${locale}/dashboard/social/${row.id}`}>
                                                     {row.id}
                                                 </Link>

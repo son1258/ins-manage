@@ -16,6 +16,8 @@
     "ctg_util": "Utilities",
     "ctg_user": "User",
 
+    "register_new": "New register",
+    "renewal_new": "Renewal / Continuation",
     "medical_ins": "Health Insurance",
     "family_health_ins": "Household Health Insurance",
     "social_ins": "Social Insurance",

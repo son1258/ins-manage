@@ -3,28 +3,23 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faHeadset, 
-  faChevronDown, 
   faExternalLinkAlt,
-  faCheck,
-  faBars
 } from '@fortawesome/free-solid-svg-icons';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 import LanguageSwitcher from './LanguageSwitcher';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/redux/store';
-import { useRouter } from 'next/navigation';
 
 const Navbar = () => {
     const t = useTranslations();
-    const locale = useLocale();
-    const router = useRouter();
     const activeTitle = useSelector((state: RootState) => state.menu.activeTitle);
+    const userInfo = useSelector((state: RootState) => state.user);
 
     return (
         <nav className="hidden md:flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200 shadow-sm font-sans sticky top-0 z-50">
             <div className="flex items-center gap-4">
-                <span className="text-[16px] font-semibold text-gray-700">{activeTitle}</span>
+                <span className="text-[16px] font-semibold text-gray-800">{activeTitle}</span>
             </div>
 
             <div className="flex items-center gap-5">
@@ -41,13 +36,12 @@ const Navbar = () => {
                 <LanguageSwitcher />
 
                 <div
-                    onClick={() => router.push(`/${locale}/dashboard/user`)} 
                     className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-all border-l pl-4 border-gray-200">
                     <div className="w-8 h-8 rounded-full bg-gray-300 border border-gray-200 overflow-hidden">
                         <div className="w-full h-full bg-gray-400" />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-bold text-gray-700 uppercase whitespace-nowrap">Vũ Thị Nhật Linh</span>
+                        <span className="text-[13px] font-bold text-gray-700 uppercase whitespace-nowrap">{userInfo.username}</span>
                     </div>
                 </div>
             </div>
