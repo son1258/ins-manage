@@ -375,8 +375,8 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-gray-600">
                                                 {
                                                     formData.serviceCode == SERVICE_CODE.BHXH ? 
-                                                    order.data.d05_ts.noi_dung[0].ho_ten : 
-                                                    order.data.tk1_ts.noi_dung[0].ho_ten
+                                                    order.data.d05_ts?.noi_dung[0].ho_ten : 
+                                                    order.data.tk1_ts?.noi_dung[0].ho_ten
                                                 }
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
