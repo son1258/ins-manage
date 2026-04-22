@@ -14,11 +14,12 @@ import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
 import { loadOrders } from '@/services/orderService';
 import Loading from '@/components/Loading';
-import { DECLARATION_STATUS, PLANS, SERVICE_CODE, STATUS } from '@/constants';
+import { DECLARATION_STATUS, PAYMENT_STATUS, PLANS, SERVICE_CODE, STATUS } from '@/constants';
 import CustomSelect from '@/components/CustomSelect';
 import dayjs from 'dayjs';
 import DateRangePicker from '@/components/DateRangePicker';
 import { formatVND } from '@/utils/common';
+import { loadUserById } from '@/services/userService';
 
 export default function Declarations() {
     const t = useTranslations();
@@ -151,11 +152,6 @@ export default function Declarations() {
             setIsLoading(false);
         }
     }
-
-    const caculatePriceUserPayment = (totalAmount: number, month: number, percent: any) => {
-        const result = Math.round(totalAmount * percent) / 100 - (66000 * month);
-        return formatVND(result);
-    }   
 
     const getServiceNameFromCode = (serviceCode: number) => {
         const find = declarations.find((item: any) => item.code == serviceCode);
@@ -354,7 +350,6 @@ export default function Declarations() {
                                         <th className="px-4 py-3 border-r border-white text-right">
                                             {formData.serviceCode == SERVICE_CODE.BHXH ? t('contribution_amount') : t('medical_ins_amount')}
                                         </th>
-                                        <th className="px-4 py-3 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -365,11 +360,18 @@ export default function Declarations() {
                                                     {order.id}
                                                 </Link>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-600">{order.user_id}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.user.username}
+                                            </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {getServiceNameFromCode(order.service_code)}
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-gray-700">{order.ld_pa}</td>
+                                            <td className="px-4 py-3 font-medium text-gray-700">
+                                                {
+                                                    order.ld_pa == PLANS.NEW ? t('new') :
+                                                    order.ld_pa == PLANS.RENEWAL ? t('renewal') : t('decrease')
+                                                }
+                                            </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {
                                                     formData.serviceCode == SERVICE_CODE.BHXH ? 
@@ -383,33 +385,31 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-gray-600">
                                                 {
                                                     formData.serviceCode == SERVICE_CODE.BHXH ? 
-                                                    order.data.d05_ts.noi_dung[0].maso_bhxh :
+                                                    order.ld_maso_bhxh :
                                                     order.data.tk1_ts.noi_dung[0].maso_bhxh
                                                 }
                                             </td>
-                                            <td className="px-4 py-3 text-gray-600">{order.created_at}</td>
+                                            <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD/MM/YYYY")}</td>
                                             <td className="px-4 py-3 text-gray-600">{order.data.d05_ts.noi_dung[0].ngay_bien_lai}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <span className="bg-teal-400 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
-                                                    {order.status == 0 ? t('not_recorded') : t('recorded') }
+                                                <span className="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
+                                                    {order.status == PAYMENT_STATUS.RECORDED ? t('recorded') : t('paid') }
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right">{order.distributors_order_number}</td>
-                                            <td className="px-4 py-3 text-right">{order.distributors_order_status}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <span className="bg-green-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
+                                                    {t('paid')}
+                                                </span>
+                                            </td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.comment}</td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.data.d05_ts.noi_dung[0].tuthang}</td>
                                             {formData.serviceCode != SERVICE_CODE.BHXH ? (
                                                 <td className="px-4 py-3 border-r border-white text-left">100</td>
                                             ) : (<></>)}
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.data.d05_ts.noi_dung[0].tongtien)}</td>
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">
-                                                {formatVND(order.data.d05_ts.noi_dung[0].tongtien - order.data.d05_ts.noi_dung[0].tien_hotro)}
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-gray-400 space-x-2 whitespace-nowrap">
-                                                <button className="hover:text-blue-600"><FontAwesomeIcon icon={faEdit} /></button>
-                                                <button className="hover:text-green-600"><FontAwesomeIcon icon={faDownload} /></button>
-                                                <button className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} /></button>
-                                                <button className="hover:text-gray-800"><FontAwesomeIcon icon={faPrint} /></button>
+                                                {formatVND(order.data.d05_ts.noi_dung[0].tongtien)}
                                             </td>
                                         </tr>
                                     ))}

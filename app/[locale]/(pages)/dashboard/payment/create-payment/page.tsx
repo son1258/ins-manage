@@ -1,60 +1,49 @@
 "use client"
 
-import { faSearch, faSync, faCalendarAlt} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useDispatch } from 'react-redux';
 import { setSelectedIds, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
-import { PLANS } from '@/constants';
-import { usePathname, useRouter } from 'next/navigation';
+import { PLANS, SERVICE_CODE } from '@/constants';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DateRangePicker from '@/components/DateRangePicker';
+import { handleApiError } from '@/utils/errorHandler';
+import Cookies from 'js-cookie';
+import { loadOrders } from '@/services/orderService';
+import dayjs from 'dayjs';
+import { formatVND } from '@/utils/common';
+import Loading from '@/components/Loading';
 
 export default function CreatePaymentRequest() {
     const t = useTranslations();
     const router = useRouter();
     const pathname = usePathname();
     const dispatch = useDispatch();
+    const accessToken = Cookies.get('accessToken');
+    const today = dayjs();
+    const searchParams = useSearchParams();
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [listDeclarationCode, setListDeclarationCode] = useState<string[]>([]);
     const [selectedDeclaration, setSelectedDeclaration] = useState();
-
+    const [isLoading, setIsLoading] = useState(false);
+    const [totalItems, setTotalItems] = useState(0);
+    const [plans, setPlans] = useState<any[]>([]);
+    const [orders, setOrders] = useState<any[]>([]);
+ 
     const declarations = [
-        {code: "bhxh", name: t('social_ins'), acronym: "bhxh"},
-        {code: "bhythgd", name: t('family_health_ins'), acronym: "bhythgd"},
+        {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
+        {code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd"},
     ]
-
-    const plans = {
-        bhxh: [
-            {code: PLANS.NEXT_PAYMENT, name: t('next_payment')},
-            {code: PLANS.NEW, name: t('new')},
-            {code: PLANS.DECREASE, name: t('decrease')},
-            {code: PLANS.REPAY, name: t('repay')},
-            {code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment')},
-        ],
-        bhythgd: [
-            {code: PLANS.RENEWAL, name: t('renewal')},
-            {code: PLANS.NEW, name: t('new')},
-            {code: PLANS.DECREASE, name: t('decrease')},
-        ]
-    }
-
-    const mockData = [
-        { id: "8965742", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Minh Tiến", code: "7722528998", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "758.160", receipt: "Chưa in", status: "Đã ghi nhận" },
-        { id: "8965733", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Đỗ Thanh Thủy", code: "7721214903", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "884.520", receipt: "Chưa in", status: "Đã ghi nhận" },
-        { id: "8965722", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Bích Duyên", code: "7721380876", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "1.263.600", receipt: "Chưa in", status: "Đã ghi nhận" },
-        { id: "8965741", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Minh Tiến", code: "7722528998", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "758.160", receipt: "Chưa in", status: "Đã ghi nhận" },
-        { id: "8965738", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Đỗ Thanh Thủy", code: "7721214903", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "884.520", receipt: "Chưa in", status: "Đã ghi nhận" },
-        { id: "8965727", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", name: "Huỳnh Bích Duyên", code: "7721380876", method: "Đóng tiếp", date: "08/04/2026", payType: "TL tái tục", amount: "1.263.600", receipt: "Chưa in", status: "Đã ghi nhận" },
-    ];
-
-    const [formData, setFormData] = useState({
-        declarationType: "",
+    
+    const [formData, setFormData] = useState<any>({
+        serviceCode: "",
         socialCode: "",
         customerName: "",
         status: "",
@@ -64,10 +53,25 @@ export default function CreatePaymentRequest() {
     });
 
     const handleValueChange = (nameField: string, value: any) => {
-        if (nameField == 'declarationType') {
+        if (nameField == 'serviceCode') {
             setSelectedDeclaration(value);
-        }
-        setFormData(prev => ({
+            if (value == SERVICE_CODE.BHXH) {
+                setPlans([
+                    {code: PLANS.NEXT_PAYMENT, name: t('next_payment')},
+                    {code: PLANS.NEW, name: t('new')},
+                    {code: PLANS.DECREASE, name: t('decrease')},
+                    {code: PLANS.REPAY, name: t('repay')},
+                    {code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment')},
+                ])
+            } else {
+                setPlans([
+                    {code: PLANS.RENEWAL, name: t('renewal')},
+                    {code: PLANS.NEW, name: t('new')},
+                    {code: PLANS.DECREASE, name: t('decrease')},
+                ])
+            }
+        } 
+        setFormData((prev: any) => ({
             ...prev,
             [nameField]: value
         }))
@@ -79,11 +83,27 @@ export default function CreatePaymentRequest() {
 
     const indexOfLastItem = currentPage * pageSize;
     const indexOfFirstItem = indexOfLastItem - pageSize;
-    const currentTableData = mockData.slice(indexOfFirstItem, indexOfLastItem);
+    const currentTableData = orders.slice(indexOfFirstItem, indexOfLastItem);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log(formData)
+        const params = new URLSearchParams();
+        params.set('limit', String(formData.limit));
+        params.set('page', '1');
+        params.set('status', String(formData.status));
+        params.set('from_date', String(formData.fromDate));
+        params.set('to_date', String(formData.toDate));
+        params.set('service_code', String(formData.serviceCode));
+        if (formData.medicalCode) {
+            params.set('medical_code', formData.medicalCode);
+        }
+        if (formData.customerName) {
+            params.set('customer_name', formData.customerName);
+        }
+        if (formData.plan) {
+            params.set('plan', formData.plan);
+        }
+        router.push(`${pathname}?${params.toString()}`);
     }
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,21 +121,102 @@ export default function CreatePaymentRequest() {
         );
     }
 
+    const getOrders = async (data: any) => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadOrders(data, accessToken);
+            if (resp && resp.success) {
+                setOrders(resp.data);
+                setTotalItems(resp.paginate.total);
+            }
+        } catch(err: any) {
+            console.log('Error get medicals: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', String(page));
+        handleValueChange('page', page);
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handleLimitChange = (limit: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('limit', String(limit));
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const getServiceNameFromCode = (serviceCode: number) => {
+        const find = declarations.find((item: any) => item.code == serviceCode);
+        return find?.acronym.toUpperCase();
+    }
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t('list_declaration')));
+        const serviceCode = searchParams.get('service_code');
+        const medicalCodeParams = searchParams.get('medical_code');
+        const customerNameParams = searchParams.get('customer_name');
+        const planParams = searchParams.get('plan');
+        const fromDateParams = searchParams.get('from_date');
+        const toDateParams = searchParams.get('to_date');
+        const statusParams = searchParams.get('status');
+        const limitParams = Number(searchParams.get('limit')) || 10;
+        const pageParams = Number(searchParams.get('page')) || 1;
+   
+        const dataFromUrl = {
+            limit: limitParams || 10,
+            page: pageParams || 1,
+            serviceCode: serviceCode || "",
+            medicalCode: medicalCodeParams || "",
+            customerName: customerNameParams || "",
+            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : "",
+            plan: planParams || "",
+            fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
+            toDate: toDateParams || today.format("YYYY-MM-DD"),
+            receiptFromDate: "",
+            receiptToDate: "",
+            fromMonth: "",
+            toMonth: ""
+        }
+   
+        setFormData(dataFromUrl);
+        setCurrentPage(dataFromUrl.page);
+        setPageSize(dataFromUrl.limit);
+        getOrders(dataFromUrl);
+    },[searchParams]) 
+
     useEffect(() => {
         dispatch(setActiveTitle(t("create_payment_request")));
-    }, [dispatch]);
+    }, []);
 
     useEffect(() => {
-        dispatch(setSelectedIds(listDeclarationCode));
-        const total = mockData
-            .filter(item => listDeclarationCode.includes(item.id))
-            .reduce((sum, item) => {
-                const num = parseInt(item.amount.replace(/\./g, ''));
-                return sum + num;
-            }, 0);
+    dispatch(setSelectedIds(listDeclarationCode));
 
-        dispatch(setTotalAmount(total));
-    }, [listDeclarationCode, dispatch]);
+    const total = orders
+        .filter(item => listDeclarationCode.includes(item.id))
+        .reduce((sum, item) => {
+            const rawAmount = item.service_code == SERVICE_CODE.BHXH 
+                ? item.data.d05_ts.noi_dung[0].tongtien
+                : item.data.d03_ts.noi_dung[0].tien_dong;
+
+            let num = 0;
+            if (typeof rawAmount === 'string') {
+                num = parseInt(rawAmount.replace(/\./g, '')) || 0;
+            } else if (typeof rawAmount === 'number') {
+                num = rawAmount;
+            }
+
+            return sum + num;
+        }, 0);
+
+    dispatch(setTotalAmount(total));
+}, [listDeclarationCode, orders, dispatch]);
 
     return (
         <div className="flex flex-col gap-3 text-black">
@@ -130,8 +231,8 @@ export default function CreatePaymentRequest() {
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('type_declaration')}</label>
                             <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.declarationType || undefined} 
-                                onChange={(value) => handleValueChange("declarationType", value)}
+                                value={formData.serviceCode || undefined} 
+                                onChange={(value) => handleValueChange("serviceCode", value)}
                                 options={declarations.map((type) => ({
                                     value: type.code,
                                     label: `${type.name} (${type.acronym.toUpperCase()})`,
@@ -155,14 +256,14 @@ export default function CreatePaymentRequest() {
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('plan')}</label>
                             <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.declarationType || undefined} 
-                                onChange={(value) => handleValueChange("declarationType", value)}
-                                options={(selectedDeclaration == 'bhxh' ? plans.bhxh : plans.bhythgd).map((plan) => ({
+                                value={formData.plan || undefined} 
+                                onChange={(value) => handleValueChange("plan", value)}
+                                options={plans.map((plan: any) => ({
                                     value: plan.code,
                                     label: plan.name,
                                 }))}
-                                disabled={formData.declarationType == ""}
-                                className={`${formData.declarationType == "" ? 'bg-gray-300' : ' bg-white'}`}
+                                disabled={formData.serviceCode == ""}
+                                className={`${formData.serviceCode == "" ? 'bg-gray-300' : ' bg-white'}`}
                             />
                         </div>
 
@@ -198,7 +299,7 @@ export default function CreatePaymentRequest() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('record_list')}</h1>
-                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
+                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
                         </div>
                     </div>
 
@@ -226,29 +327,35 @@ export default function CreatePaymentRequest() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {currentTableData.map((row, idx) => {
-                                        const isSelected = listDeclarationCode.includes(row.id);
+                                    {orders.map((order, idx) => {
+                                        const isSelected = listDeclarationCode.includes(order.id);
                                         return (
                                             <tr 
-                                                key={idx} 
+                                                key={order.id} 
                                                 className={`transition-colors ${isSelected ? 'bg-gray-200' : 'hover:bg-blue-50/30 bg-white'}`}
                                             >
                                                 <td className="flex items-center gap-2 px-4 py-3 text-blue-600 font-medium text-center">
                                                     <input 
                                                         type="checkbox" 
                                                         checked={isSelected}
-                                                        onChange={() => handleSelectRow(row.id)}
+                                                        onChange={() => handleSelectRow(order.id)}
                                                         className="w-4 h-4 cursor-pointer"
                                                     />
-                                                    {row.id}
+                                                    {order.id}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600">{row.type}</td>
-                                                <td className="px-4 py-3 text-gray-600">{row.staff}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-700">{row.name}</td>
-                                                <td className="px-4 py-3 text-gray-600">{row.code}</td>
-                                                <td className="px-4 py-3 text-gray-600">{row.method}</td>
-                                                <td className="px-4 py-3 text-gray-600">{row.date}</td>
-                                                <td className="px-4 py-3 text-right text-teal-600 font-bold">{row.amount}</td>
+                                                <td className="px-4 py-3 text-gray-600">{getServiceNameFromCode(order.service_code)}</td>
+                                                <td className="px-4 py-3 text-gray-600">{order.user?.username}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-700">{order.ld_name}</td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {order.service_code == SERVICE_CODE.BHXH ? order.data?.d05_ts?.noi_dung[0]?.maso_bhxh : order.data?.d03_ts?.noi_dung[0]?.maso_bhxh}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {order.service_code == SERVICE_CODE.BHXH ? order.data?.d05_ts?.noi_dung[0]?.pa : order.data?.d03_ts?.noi_dung[0]?.pa}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD-MM-YYYY")}</td>
+                                                <td className="px-4 py-3 text-right text-teal-600 font-bold">
+                                                    {order.service_code == SERVICE_CODE.BHXH ? formatVND(order.data?.d05_ts?.noi_dung[0]?.tongtien) : formatVND(order.data?.d03_ts?.noi_dung[0]?.tien_dong)}
+                                                </td>
                                             </tr>
                                         )
                                     })}
@@ -257,17 +364,15 @@ export default function CreatePaymentRequest() {
                         </div>
                         <Pagination
                             currentPage={currentPage}
-                            totalItems={mockData.length}
+                            totalItems={totalItems}
                             pageSize={pageSize}
-                            onPageChange={(page) => setCurrentPage(page)}
-                            onPageSizeChange={(size) => {
-                                setPageSize(size);
-                                setCurrentPage(1);
-                            }}
+                            onPageChange={(page) => handlePageChange(page)}
+                            onPageSizeChange={(limit) => handleLimitChange(limit)}
                         />
                     </div>
                 </div>
             </div>
+            <Loading stateShow={isLoading} />
         </div>
     )
 }

@@ -38,6 +38,7 @@ export const PLANS = {
 }
 
 export const PAYMENT_STATUS = {
+    RECORDED: 0,
     PAID: 1,
-    UN_PAID: 0
+    PARTNER_PAID: 6
 }
