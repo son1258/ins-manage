@@ -1,15 +1,17 @@
 import { SERVICE_CODE } from "@/constants";
 import { callApi } from "./callApi";
 
-export const loadMedicals = (params: any, token: string) => {
+export const loadOrders = (params: any, token: string) => {
     let url = 'dvc/orders'
     const queryParams: string[] = [];
-    queryParams.push(`service_code=${SERVICE_CODE.BHYT}`)
     queryParams.push(`limit=${params.limit}`)
     queryParams.push(`page=${params.page}`)
     queryParams.push(`status=${params.status}`)
     queryParams.push(`from_date=${params.fromDate}`)
     queryParams.push(`to_date=${params.toDate}`)
+    if (params.serviceCode) {
+        queryParams.push(`service_code=${params.serviceCode}`)
+    }
     if (params.medicalCode) {
         queryParams.push(`ld_maso_bhxh=${params.medicalCode}`)
     }

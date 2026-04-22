@@ -15,6 +15,9 @@ import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import CustomSelect from '@/components/CustomSelect';
 import { handleApiError } from '@/utils/errorHandler';
 import { loadDistributors } from '@/services/distributorService';
+import { disableCollection, loadCollections } from '@/services/collectionService';
+import Modal from '@/components/Modal';
+import { toast } from 'react-toastify';
 
 export default function Collection() {
     const t = useTranslations();
@@ -28,38 +31,31 @@ export default function Collection() {
     const [pageSize, setPageSize] = useState(10);
     const [isLoading, setIsLoading] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
-    const [distributors, setDistributors] = useState();
-    const [collectors, setCollectors] = useState<any[]>([]);
+    const [distributors, setDistributors] = useState<any[]>([]);
+    const [collections, setCollections] = useState<any[]>([]);
+    const [selectedCollection, setSelectedCollection] = useState<any>();
+    const [openModal, setOpenModal] = useState(false);
 
     const listStatus = [
         {code: STATUS.ACTIVE, name: t('active')},
         {code: STATUS.DEACTIVE, name: t('deactive')},
-    ];  
-
-    const listDistributors = [
-        {code: "ABC01A", name: 'BHXH cơ sở Tân Phú'},
-        {code: "ABC02B", name: 'BHXH  cơ sở Nhà Bè'},
-        {code: "ABC03C", name: 'BHXH  cơ sở Hóc Môn'},
-        {code: "ABC04D", name: 'BHXH cơ sở Tân Nhựt'},
-    ]
+    ];
 
     const [formData, setFormData] = useState({
-        distributorCode: "",
+        distributorId: "",
         collectorCode: "",
         collectorName: "",
-        status: ""
+        status: STATUS.ACTIVE,
+        page: 1,
+        limit: 10
     })
 
     const createNew = () => {
         router.push(`/${locale}/dashboard/collection/create-new`)
     }
 
-    const editCollector = (collector: any) => {
-        router.push(`/${locale}/dashboard/collector/edit-${collector.collector_code}`)
-    }
-
     const handleValueChange = (nameField: string, value: any) => {
-          setFormData(prev => ({
+        setFormData(prev => ({
             ...prev,
             [nameField]: value
         }))
@@ -67,6 +63,20 @@ export default function Collection() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+        const params = new URLSearchParams();
+        params.set('limit', String(formData.limit));
+        params.set('page', '1');
+        params.set('status', String(formData.status));
+        if (formData.distributorId) {
+            params.set('distributor_id', formData.distributorId);
+        }
+        if (formData.collectorCode) {
+            params.set('code', formData.collectorCode);
+        }
+        if (formData.collectorName) {
+            params.set('name', formData.collectorName);
+        }
+        router.push(`${pathname}?${params.toString()}`);
     }
 
     const handleRefresh = () => {
@@ -80,10 +90,55 @@ export default function Collection() {
             const resp = await loadDistributors(data, accessToken);
             if (resp && resp.data) {
                 setDistributors(resp.data);
-                setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
             console.log('Error get distributors: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const getCollections = async (distributorId: string) => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadCollections(distributorId, accessToken);
+            if (resp && resp.data) {
+                setCollections(resp.data);
+                setTotalItems(resp.data.length);
+            }
+        } catch(err: any) {
+            console.log('Error get distributors: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const handleSelectDisableCollection = (item: any) => {
+        setOpenModal(!openModal);
+        setSelectedCollection(item);
+    }
+
+    const updateStateCollection = async () => {
+        try {
+            if (!accessToken) return;
+            setIsLoading(true);
+            const data = {
+                id: selectedCollection.id,
+                code: selectedCollection.code,
+                name: selectedCollection.name,
+                distributor_id: selectedCollection.distributor_id
+            }
+            const resp = await disableCollection(data, accessToken);
+            if (resp && resp.success) {
+                setOpenModal(false);
+                toast.success(t('success'));
+                await getCollections(data.distributor_id);
+            }
+        } catch(err: any) {
+            console.log('Error disable distributor: ', err);
             handleApiError(err, t);
         } finally {
             setIsLoading(false);
@@ -94,13 +149,15 @@ export default function Collection() {
         dispatch(setActiveTitle(t('collection')));
         const code = searchParams.get('code') || "";
         const name = searchParams.get('name') || "";
+        const distributorId = searchParams.get('distributor_id') || "";
         const status = searchParams.get('status');
         const limit = Number(searchParams.get('limit')) || 10;
         const page = Number(searchParams.get('page')) || 1;
 
         const dataFromUrl = {
-            distributorCode: code,
-            distributorName: name,
+            distributorId: distributorId,
+            collectorCode: code,
+            collectorName: name,
             status: (status !== null && status !== "") ? Number(status) : STATUS.ACTIVE,
             page: page,
             limit: limit
@@ -110,6 +167,9 @@ export default function Collection() {
         setPageSize(dataFromUrl.limit);
         setCurrentPage(dataFromUrl.page);
         getDistributors(dataFromUrl);
+        if (distributorId) {
+            getCollections(distributorId);
+        }
     },[searchParams])
 
     return (
@@ -133,11 +193,11 @@ export default function Collection() {
                                 </label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.distributorCode} 
-                                    onChange={(value) => handleValueChange("distributorCode", value)}
-                                    options={listDistributors.map((agency: any) => ({
-                                        value: agency.code,
-                                        label: `${agency.code}_${agency.name}`,
+                                    value={formData.distributorId} 
+                                    onChange={(value) => handleValueChange("distributorId", value)}
+                                    options={distributors.map((distributor: any) => ({
+                                        value: distributor.id,
+                                        label: `${distributor.code}_${distributor.name}`,
                                     }))}
                                 />
                             </div>
@@ -192,18 +252,14 @@ export default function Collection() {
                                     <th className="px-4 py-3 border-r border-white text-center w-16">{t('index')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('collection_code')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('collection_name')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('distributor_code')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('distributor_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('status')}</th>
                                     <th className="px-4 py-3 text-center">{t('action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {collectors.map((item, index) => (
+                                {collections.map((item, index) => (
                                     <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
-                                        <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{item.id}</td>
-                                        <td className="px-4 py-3 text-gray-700">{item.username}</td>
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{item.code}</td>
                                         <td className="px-4 py-3 text-gray-700">{item.name}</td>
                                         <td className="px-4 py-3">
@@ -215,14 +271,18 @@ export default function Collection() {
                                         </td>
                                         <td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
                                             <button 
-                                                onClick={() => editCollector(item)}
+                                                onClick={() => router.push(`/${locale}/dashboard/collection/${item.id}`)}
                                                 className="hover:text-blue-600 transition-colors cursor-pointer"
                                             >
                                                 <FontAwesomeIcon icon={faEdit} />
                                             </button>
-                                            <button className="hover:text-red-600 transition-colors cursor-pointer">
-                                                <FontAwesomeIcon icon={faTrashAlt} />
-                                            </button>
+                                            {item.status == STATUS.ACTIVE && (
+                                                <button 
+                                                    onClick={() => handleSelectDisableCollection(item)}
+                                                    className="hover:text-red-600 transition-colors">
+                                                        <FontAwesomeIcon icon={faTrashAlt} />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -241,7 +301,12 @@ export default function Collection() {
                     />
                 </div>
             </div>
-
+            <Modal 
+                isOpen={openModal} 
+                title={t('disable_distributor')} 
+                onConfirm={updateStateCollection} 
+                onClose={() => setOpenModal(false)} 
+            />
             <Loading stateShow={isLoading} />
         </div>
   );
