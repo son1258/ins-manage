@@ -393,8 +393,8 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-gray-600">
                                                 {
                                                     formData.serviceCode == SERVICE_CODE.BHXH ?  
-                                                    order.data.d05_ts.noi_dung[0].ngay_bien_lai : 
-                                                    order.data.d03_ts.noi_dung[0].ngay_bien_lai
+                                                    order.data.d05_ts?.noi_dung[0].ngay_bien_lai : 
+                                                    order.data.d03_ts?.noi_dung[0].ngay_bien_lai
                                                 }
                                             </td>
                                             <td className="px-4 py-3 text-center">
@@ -412,8 +412,8 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">
                                                 {   
                                                     formData.serviceCode == SERVICE_CODE.BHXH ? 
-                                                    order.data.d05_ts.noi_dung[0].tuthang : 
-                                                    order.data.d03_ts.noi_dung[0].tu_ngay
+                                                    order.data.d05_ts?.noi_dung[0].tuthang : 
+                                                    order.data.d03_ts?.noi_dung[0].tu_ngay
                                                 }
                                             </td>
                                             {formData.serviceCode != SERVICE_CODE.BHXH ? (
@@ -423,8 +423,8 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">
                                                 {
                                                     formData.serviceCode == SERVICE_CODE.BHXH ?
-                                                    formatVND(order.data.d05_ts.noi_dung[0].tongtien) :
-                                                    formatVND(order.data.d03_ts.noi_dung[0].tien_dong)
+                                                    formatVND(order.data.d05_ts?.noi_dung[0].tongtien) :
+                                                    formatVND(order.data.d03_ts?.noi_dung[0].tien_dong)
                                                 }
                                             </td>
                                         </tr>
