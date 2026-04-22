@@ -87,6 +87,7 @@ export default function Payment() {
     ];
 
     const [formData, setFormData] = useState({
+        paymentCode: "",
         status: PAYMENT_STATUS.PAID,
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
@@ -143,6 +144,7 @@ export default function Payment() {
         const page = Number(searchParams.get('page')) || 1;
     
         const dataFromUrl = {
+            paymentCode: "",
             fromDate: fromDate,
             toDate: toDate,
             status: (status !== "") ? Number(status) : STATUS.ACTIVE,

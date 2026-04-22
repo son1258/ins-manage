@@ -68,7 +68,7 @@ export default function Declarations() {
         { code: DECLARATION_STATUS.CANCELLED_DECLARATION, name: t('cancelled_declaration') },
     ]
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         limit: 10,
         page: 1,
         serviceCode: SERVICE_CODE.BHXH,
@@ -89,7 +89,7 @@ export default function Declarations() {
             setSelectedDeclaration(value);
         }
 
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
             [nameField]: value
         }))
