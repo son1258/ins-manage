@@ -18,6 +18,7 @@ import { loadPayments } from '@/services/paymentService';
 import { handleApiError } from '@/utils/errorHandler';
 import dayjs from 'dayjs';
 import InfoItem from '@/components/InfoItem';
+import { formatVND } from '@/utils/common';
 
 export default function Payment() {
     const t = useTranslations();
@@ -227,7 +228,7 @@ export default function Payment() {
                                                 </td>
                                                 <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center">{row.id}</td>
                                                 <td className="px-4 py-3 text-gray-600">{row.staff}</td>
-                                                <td className="px-4 py-3 text-teal-600 font-bold">{row.amount}</td>
+                                                <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(row.amount)}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <span className={`${row.status === 0 ? "bg-amber-400" : "bg-blue-500"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
                                                         {row.status === 0 ? "Chưa thanh toán" : "Đã thanh toán"}
