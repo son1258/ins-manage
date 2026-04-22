@@ -390,7 +390,13 @@ export default function Declarations() {
                                                 }
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD/MM/YYYY")}</td>
-                                            <td className="px-4 py-3 text-gray-600">{order.data.d05_ts.noi_dung[0].ngay_bien_lai}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {
+                                                    formData.serviceCode == SERVICE_CODE.BHXH ?  
+                                                    order.data.d05_ts.noi_dung[0].ngay_bien_lai : 
+                                                    order.data.d03_ts.noi_dung[0].ngay_bien_lai
+                                                }
+                                            </td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
                                                     {order.status == PAYMENT_STATUS.RECORDED ? t('recorded') : t('paid') }
@@ -403,13 +409,23 @@ export default function Declarations() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.comment}</td>
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.data.d05_ts.noi_dung[0].tuthang}</td>
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">
+                                                {   
+                                                    formData.serviceCode == SERVICE_CODE.BHXH ? 
+                                                    order.data.d05_ts.noi_dung[0].tuthang : 
+                                                    order.data.d03_ts.noi_dung[0].tu_ngay
+                                                }
+                                            </td>
                                             {formData.serviceCode != SERVICE_CODE.BHXH ? (
                                                 <td className="px-4 py-3 border-r border-white text-left">100</td>
                                             ) : (<></>)}
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">
-                                                {formatVND(order.data.d05_ts.noi_dung[0].tongtien)}
+                                                {
+                                                    formData.serviceCode == SERVICE_CODE.BHXH ?
+                                                    formatVND(order.data.d05_ts.noi_dung[0].tongtien) :
+                                                    formatVND(order.data.d03_ts.noi_dung[0].tien_dong)
+                                                }
                                             </td>
                                         </tr>
                                     ))}
