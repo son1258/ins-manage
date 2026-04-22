@@ -160,7 +160,7 @@ export default function Declarations() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t('list_declaration')));
-        const serviceCode = searchParams.get('service_code') || SERVICE_CODE.BHXH;
+        const serviceCode = Number(searchParams.get('service_code')) || SERVICE_CODE.BHXH;
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
         const planParams = searchParams.get('plan');
