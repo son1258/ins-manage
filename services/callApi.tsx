@@ -1,7 +1,8 @@
 import axios from "axios";
 
 export const callApi = async function (endpoint = '', method = 'GET', body = {}, version = '', token = '', isFormData = false) {
-    let API_URL = process.env.NEXT_PUBLIC_BASE_URL + '/api/' + (version ? version : 'v1');
+    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    const API_URL = `${BASE_URL}/api/${version || "v1"}`;
 
     let headers: any = {
         "Content-Type": 'application/json',
