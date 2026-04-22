@@ -128,8 +128,8 @@ export default function DistributorManagement() {
     }
 
     const updateStateDistributor = async () => {
+        if (!accessToken || !selectedId) return;
         try {
-            if (!accessToken || !selectedId) return;
             setIsLoading(true);
             const resp = await disableDistributor(selectedId, accessToken);
             if (resp && resp.success) {
@@ -149,7 +149,12 @@ export default function DistributorManagement() {
     const handleSelectDisableDistributor = (id: string) => {
         setOpenModal(!openModal);
         setSelectedId(id);
-    }  
+    } 
+    
+    const findProviderName = (providerId: string) => {
+        const find = providers.find(item => item.id == providerId);
+        return find?.name;
+    }
 
     useEffect(() => {
         getProviders();
@@ -272,7 +277,7 @@ export default function DistributorManagement() {
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{item.code}</td>
                                         <td className="px-4 py-3 text-gray-700">{item.name}</td>
-                                        <td className="px-4 py-3 text-gray-700">{}</td>
+                                        <td className="px-4 py-3 text-gray-700">{findProviderName(item.provider_id)}</td>
                                         <td className="px-4 py-3">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
                                                 item.status === STATUS.ACTIVE

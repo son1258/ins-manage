@@ -1,6 +1,6 @@
 "use client"
 
-import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileAlt, faFileImport, faFileExport, faCalendarAlt, faPaperPlane, faCirclePlus, faQrcode, faChevronRight, faChevronDown} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileAlt, faFileImport, faFileExport, faCalendarAlt, faPaperPlane, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +17,7 @@ import { PAYMENT_STATUS, STATUS } from '@/constants';
 import { loadPayments } from '@/services/paymentService';
 import { handleApiError } from '@/utils/errorHandler';
 import dayjs from 'dayjs';
+import InfoItem from '@/components/InfoItem';
 
 export default function Payment() {
     const t = useTranslations();
@@ -30,9 +31,11 @@ export default function Payment() {
     const from = today.subtract(6, "day");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [payments, setPayments] = useState();
+    const [payments, setPayments] = useState<any[]>([]);
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [selectItem, setSelectItem] = useState<any>();
 
     const status = [
         {code: "01", name: t('recorded')},
@@ -45,50 +48,9 @@ export default function Payment() {
         {code: "08", name: t('cancelled_declaration')},
     ]
 
-    const mockData = [
-        { 
-            id: "8965743", 
-            staff: "VŨ THỊ NHẬT LINH", 
-            amount: "27.736.020", 
-            status: 0, 
-            create_date: "21/04/2026", 
-            payment_date: "",
-            details: [
-                { id: "9109764", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "3121123126", name: "Hồ Xuân Cường", price: "315.900", date: "21/04/2026" },
-                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
-                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
-            ]
-        },
-        { 
-            id: "8965742", 
-            staff: "VŨ THỊ NHẬT LINH", 
-            amount: "40.141.231", 
-            status: 1, 
-            create_date: "09/04/2026", 
-            payment_date: "09/04/2026",
-            details: [
-                { id: "9107001", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "123456789", name: "Nguyễn Văn A", price: "758.160", date: "09/04/2026" },
-                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
-                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
-                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
-                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
-                { id: "9108120", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "7521452516", name: "Đỗ Hữu Thọ", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107886", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4822525253", name: "Nguyễn Bùi Nguyên Khoa", price: "884.520", date: "21/04/2026" },
-                { id: "9107883", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4825252527", name: "Phạm Thị Bình", price: "1.263.600", date: "21/04/2026" },
-                { id: "9107745", staff: "VŨ THỊ NHẬT LINH", type: "BHYTHGD", bhxh_code: "4866422436", name: "Trần Thị Đoan Hương", price: "1.263.600", date: "21/04/2026" },
-            ]
-        }
-    ];
-
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         paymentCode: "",
-        status: PAYMENT_STATUS.PAID,
+        status: "",
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
         limit: 10,
@@ -96,10 +58,15 @@ export default function Payment() {
     });
 
     const handleValueChange = (nameField: string, value: any) => {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
             [nameField]: value
         }))
+    }
+
+    const handleShowOr = (item: any) => {
+        setShowModal(true);
+        setSelectItem(item);
     }
 
     const toggleRow = (id: string) => {
@@ -112,7 +79,6 @@ export default function Payment() {
 
     const indexOfLastItem = currentPage * pageSize;
     const indexOfFirstItem = indexOfLastItem - pageSize;
-    const currentTableData = mockData.slice(indexOfFirstItem, indexOfLastItem);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -147,7 +113,7 @@ export default function Payment() {
             paymentCode: "",
             fromDate: fromDate,
             toDate: toDate,
-            status: (status !== "") ? Number(status) : STATUS.ACTIVE,
+            status: (status !== null && status !== "") ? Number(status) : "",
             page: page,
             limit: limit
         };
@@ -216,7 +182,7 @@ export default function Payment() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_payment_request')}</h1>
-                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{payments.length}</span>
                         </div>
                         
                         <div className="flex gap-2">
@@ -247,7 +213,7 @@ export default function Payment() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {mockData.map((row) => (
+                                    {payments.map((row) => (
                                         <React.Fragment key={row.id}>
                                             <tr 
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === row.id ? 'bg-blue-50/50' : ''}`}
@@ -267,15 +233,20 @@ export default function Payment() {
                                                         {row.status === 0 ? "Chưa thanh toán" : "Đã thanh toán"}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600">{row.create_date}</td>
+                                                <td className="px-4 py-3 text-gray-600">{dayjs(row.created_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-gray-600">{row.payment_date || "-"}</td>
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
-                                                    <button className="hover:text-blue-600"><FontAwesomeIcon icon={faQrcode} /></button>
+                                                    <button 
+                                                        onClick={() => handleShowOr(row)}
+
+                                                        className="hover:text-blue-600">
+                                                        <FontAwesomeIcon icon={faQrcode} />
+                                                    </button>
                                                     {row.status === 0 && <button className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} /></button>}
                                                 </td>
                                             </tr>
 
-                                            {expandedRow === row.id && (
+                                            {/* {expandedRow === row.id && (
                                                 <tr>
                                                     <td colSpan={8} className="bg-orange-50/30 p-0">
                                                         <div className="overflow-x-auto">
@@ -292,7 +263,7 @@ export default function Payment() {
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    {row.details.map((detail) => (
+                                                                    {row.details.map((detail: any) => (
                                                                         <tr key={detail.id} className="border-b border-orange-50 last:border-0">
                                                                             <td className="pl-14 py-2 text-blue-600">{detail.id}</td>
                                                                             <td className="px-4 py-2">{detail.staff}</td>
@@ -308,7 +279,7 @@ export default function Payment() {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            )}
+                                            )} */}
                                         </React.Fragment>
                                     ))}
                                 </tbody>
@@ -316,7 +287,7 @@ export default function Payment() {
                         </div>
                         <Pagination
                             currentPage={currentPage}
-                            totalItems={mockData.length}
+                            totalItems={payments.length}
                             pageSize={pageSize}
                             onPageChange={(page) => setCurrentPage(page)}
                             onPageSizeChange={(size) => {
@@ -326,7 +297,78 @@ export default function Payment() {
                         />
                     </div>
                 </div>
+                {showModal && selectItem && ( // Thêm kiểm tra selectItem để tránh lỗi crash
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden relative animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-3 border-b border-gray-100">
+                <h3 className="text-base font-semibold text-gray-800">
+                    {t('transfer_info')}
+                </h3>
+                <button 
+                    onClick={() => setShowModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                    <FontAwesomeIcon icon={faTimes} size="lg" />
+                </button>
             </div>
+
+            <div className="p-6">
+                <div className="mb-4 border-b border-gray-100">
+                    <div className="inline-block border-b-2 border-blue-600 px-2 pb-1 text-blue-800 font-bold text-sm">
+                        Vietcombank
+                    </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                    {/* QR Code Section */}
+                    <div className="w-full md:w-1/2 flex flex-col items-center">
+                        <div className="border-2 border-gray-100 rounded-xl bg-white shadow-sm p-2">
+                            <img 
+                                // Sử dụng encodeURIComponent cho addInfo để tránh lỗi ký tự đặc biệt trong URL
+                                src={`https://api.vietqr.io/image/vietcombank-970436-23121321232.jpg?amount=${String(selectItem.amount).replace(/\D/g,'')}&addInfo=${encodeURIComponent('TT ' + selectItem.id)}`}
+                                alt="QR Payment" 
+                                className="w-40 h-40 object-contain"
+                            />
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2 italic">Quét mã để thanh toán nhanh</p>
+                    </div>
+
+                    {/* Info Section */}
+                    <div className="w-full md:w-1/2 space-y-3 text-[13px]">
+                        <InfoItem 
+                            label="Tên tài khoản" 
+                            value="CONG TY CO PHAN BAO HIEM PVI" 
+                        />
+                        <InfoItem 
+                            label="Số tài khoản" 
+                            value="0071001234567" 
+                        />
+                        <InfoItem 
+                            label="Ngân hàng" 
+                            value="Vietcombank - CN TP.HCM" 
+                        />
+                        <InfoItem 
+                            label="Số tiền" 
+                            // Thêm kiểm tra toLocaleString an toàn
+                            value={`${Number(String(selectItem.amount).replace(/\D/g,'')).toLocaleString('vi-VN')} đ`} 
+                            isRed
+                        />
+                        
+                        <div className="pt-2 border-t border-dashed border-gray-200">
+                            <label className="text-xs font-bold text-gray-700 block mb-1">{t('explan')}:</label>
+                            <div className="bg-gray-50 p-2 rounded border border-gray-100 break-all">
+                                <span className="text-red-600 font-bold">TT {selectItem.id}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+            </div>
+            
         </div>
     )
 }

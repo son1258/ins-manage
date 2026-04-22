@@ -27,7 +27,7 @@ export const loadPayments = (params: any, token: string) => {
     return resp;
 }
 
-export const createPayment = (data: any, token: string) => {
+export const createNewPayment = (data: any, token: string) => {
     const url = 'payment/create';
     const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
