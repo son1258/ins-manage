@@ -6,40 +6,100 @@ import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
+import Cookies from 'js-cookie';
+import Loading from '@/components/Loading';
+import { loadDistributors } from '@/services/distributorService';
+import { handleApiError } from '@/utils/errorHandler';
+import { toast } from 'react-toastify';
+import { createCollection } from '@/services/collectionService';
 
 export default function CreateCollection() {
     const t = useTranslations();
     const dispatch = useDispatch();
-    const listUnits = [
-        {code: "BIPV01U", name: "BHXH-G Thành phố Hồ Chí Minh", status: 0},
-        {code: "BIPV012", name: "BHXH-G Thành phố Thủ Đức", status: 1},
-    ];
-
-    const listDistributors = [
-        {code: "ABC01A", name: 'BHXH cơ sở Tân Phú'},
-        {code: "ABC02B", name: 'BHXH  cơ sở Nhà Bè'},
-        {code: "ABC03C", name: 'BHXH  cơ sở Hóc Môn'},
-        {code: "ABC04D", name: 'BHXH cơ sở Tân Nhựt'},
-    ]
+    const accessToken = Cookies.get('accessToken');
+    const [isLoading, setIsLoading] = useState(false);
+    const [distributors, setDistributors] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
-        distributorCode: "",
-        username: "",
-        password: "",
-        status: 1,
+        distributorId: "",
+        code: "",
+        name: "",
     });
+
+    const [errors, setErrors] = useState<any>({
+        distributorId: false,
+        code: false,
+        name: false,
+    })
 
     const handleValueChange = (nameField: string, value: any) => {
         setFormData(prev => ({
             ...prev,
             [nameField]: value
-        }))
+        }));
+        
+        setErrors((prev: any) => ({
+            ...prev,
+            [nameField]: !value
+        }));
     }
 
+    const getDistributors = async () => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadDistributors({}, accessToken);
+            if (resp && resp.data) {
+                setDistributors(resp.data);
+            }
+        } catch(err: any) {
+            console.log('Error get distributors: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
+     const resetForm = () => {
+        setFormData({
+            distributorId: "",
+            code: "",
+            name: ""
+        });
+
+        setErrors({
+            distributorId: false,
+            code: false,
+            name: false,
+        }); 
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setIsLoading(true);
+            const data = {
+                distributor_id: formData.distributorId,
+                code: formData.code,
+                name: formData.name
+            }
+            if (!accessToken) return;
+            const resp = await createCollection(data, accessToken);
+            if (resp && resp.success) {
+                toast.success(t('success'));
+                resetForm();
+            }
+        } catch (err: any) {
+            console.log('Error create collection:', err.message);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
     useEffect(() => {
-        dispatch(setActiveTitle(t('add_collector')))
+        dispatch(setActiveTitle(t('add_collector')));
+        getDistributors();
     },[])
 
     return (
@@ -49,7 +109,7 @@ export default function CreateCollection() {
                 <h2 className="text-white font-bold uppercase tracking-wide">{t('create_new_collector')}</h2>
                 </div>
                 
-                <form className="p-8 space-y-6">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col gap-1.5 mt-1">
                             <label className="text-sm text-gray-700">
@@ -57,35 +117,38 @@ export default function CreateCollection() {
                             </label>
                            <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.distributorCode || undefined} 
-                                onChange={(value) => handleValueChange("agencyCode", value)}
-                                options={listDistributors.map((distributor: any) => ({
-                                    value: distributor.code,
+                                value={formData.distributorId || undefined} 
+                                onChange={(value) => handleValueChange("distributorId", value)}
+                                options={distributors.map((distributor: any) => ({
+                                    value: distributor.id,
                                     label: `${distributor.code}_${distributor.name}`,
                                 }))}
                             />
                         </div>
                         <InputGroup 
                             label={t('collector_code')} 
-                            onChange={(e) => handleValueChange("collectorCode", e.target.value)}
-                            value={formData.collectorCode}
+                            onChange={(e) => handleValueChange("code", e.target.value)}
+                            value={formData.code}
+                            isError={errors.code}
                             required 
                         />
                         <InputGroup 
-                            label={"Tên điểm thu"}
-                            onChange={(e) => handleValueChange("username", e.target.value)}
-                            value={formData.username}
+                            label={t('collection_name')}
+                            onChange={(e) => handleValueChange("name", e.target.value)}
+                            value={formData.name}
+                            isError={errors.name}
                             required 
                         />
                     </div>
 
-                    <div className="pt-6 border-t flex justify-end gap-3">
+                    <div className="flex justify-end gap-3">
                         <button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded-md text-sm font-bold hover:bg-blue-800 transition shadow-md">
                             {t('create')}
                         </button>
                     </div>
                 </form>
             </div>
+            <Loading stateShow={isLoading} />
         </div>
     );
 }

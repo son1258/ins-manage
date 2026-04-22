@@ -12,12 +12,13 @@ import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
-import { loadMedicals } from '@/services/medicalService';
+import { loadOrders } from '@/services/orderService';
 import Loading from '@/components/Loading';
-import { DECLARATION_STATUS, PLANS, STATUS } from '@/constants';
+import { DECLARATION_STATUS, PLANS, SERVICE_CODE, STATUS } from '@/constants';
 import CustomSelect from '@/components/CustomSelect';
 import dayjs from 'dayjs';
 import DateRangePicker from '@/components/DateRangePicker';
+import { formatVND } from '@/utils/common';
 
 export default function Declarations() {
     const t = useTranslations();
@@ -31,14 +32,14 @@ export default function Declarations() {
     const from = today.subtract(6, "day");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [listDeclarations, setListDeclarations] = useState();
+    const [totalPage, setTotalPage] = useState(0);
+    const [orders, setOrders] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedDeclaration, setSelectedDeclaration] = useState();
-    const [planViaDeclarationCode, setPlanViaDeclarationCode] = useState();
 
     const declarations = [
-        {code: "bhxh", name: t('social_ins'), acronym: "bhxh"},
-        {code: "bhythgd", name: t('family_health_ins'), acronym: "bhythgd"},
+        {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
+        {code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd"},
     ]
 
     const plans = {
@@ -67,40 +68,13 @@ export default function Declarations() {
         { code: DECLARATION_STATUS.CANCELLED_DECLARATION, name: t('cancelled_declaration') },
     ]
 
-    const mockData = [
-        { id: "8965742", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 0, date: "08/04/2026", payType: 0, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965733", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 0, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965722", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 0, date: "08/04/2026", payType: 1, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965741", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 0, date: "08/04/2026", payType: 0, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965738", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 0, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965727", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 0, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965742", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 0, date: "08/04/2026", payType: 1, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965733", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 0, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965722", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 0, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965741", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 0, date: "08/04/2026", payType: 1, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965738", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 1, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965727", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 2, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965742", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 2, date: "08/04/2026", payType: 1, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965733", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 1, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965722", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 2, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965741", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 1, date: "08/04/2026", payType: 1, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965738", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 0, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965727", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 0, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965742", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 0, date: "08/04/2026", payType: 0, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965733", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 0, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965722", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 0, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-        { id: "8965741", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Minh Tiến", code: "7722528998", method: 1, date: "08/04/2026", payType: 0, amount: "758.160", receipt: 0, status: 1 },
-        { id: "8965738", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Đỗ Thanh Thủy", code: "7721214903", method: 2, date: "08/04/2026", payType: 0, amount: "884.520", receipt: 0, status: 1 },
-        { id: "8965727", staff: "VŨ THỊ NHẬT LINH", type: t('summary_family_health_ins'), name: "Huỳnh Bích Duyên", code: "7721380876", method: 1, date: "08/04/2026", payType: 0, amount: "1.263.600", receipt: 0, status: 1 },
-    ];
-
     const [formData, setFormData] = useState({
         limit: 10,
         page: 1,
-        declarationType: "",
+        serviceCode: SERVICE_CODE.BHXH,
         medicalCode: "",
         customerName: "",
-        status: STATUS.ACTIVE,
+        status: "",
         plan: "",
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
@@ -111,7 +85,7 @@ export default function Declarations() {
     });
 
     const handleValueChange = (nameField: string, value: any) => {
-        if (nameField == 'declarationType') {
+        if (nameField == 'serviceCode') {
             setSelectedDeclaration(value);
         }
 
@@ -121,10 +95,6 @@ export default function Declarations() {
         }))
     }
 
-    const indexOfLastItem = currentPage * pageSize;
-    const indexOfFirstItem = indexOfLastItem - pageSize;
-    const currentTableData = mockData.slice(indexOfFirstItem, indexOfLastItem);
-
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         const params = new URLSearchParams();
@@ -133,6 +103,7 @@ export default function Declarations() {
         params.set('status', String(formData.status));
         params.set('from_date', String(formData.fromDate));
         params.set('to_date', String(formData.toDate));
+        params.set('service_code', String(formData.serviceCode));
         if (formData.medicalCode) {
             params.set('medical_code', formData.medicalCode);
         }
@@ -149,13 +120,29 @@ export default function Declarations() {
         router.push(pathname);
     }
 
-    const getMedicals = async (data: any) => {
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', String(page));
+        handleValueChange('page', page);
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handleLimitChange = (limit: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('limit', String(limit));
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const getOrders = async (data: any) => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
-            const resp = await loadMedicals(data, accessToken);
+            const resp = await loadOrders(data, accessToken);
+            console.log(resp)
             if (resp && resp.success) {
-                setListDeclarations(resp.data);
+                setOrders(resp.data);
+                setTotalPage(resp.paginate.total);
             }
         } catch(err: any) {
             console.log('Error get medicals: ', err);
@@ -165,9 +152,19 @@ export default function Declarations() {
         }
     }
 
+    const caculatePriceUserPayment = (totalAmount: number, month: number, percent: any) => {
+        const result = Math.round(totalAmount * percent) / 100 - (66000 * month);
+        return formatVND(result);
+    }   
+
+    const getServiceNameFromCode = (serviceCode: number) => {
+        const find = declarations.find((item: any) => item.code == serviceCode);
+        return find?.acronym.toUpperCase();
+    }
+
     useEffect(() => {
         dispatch(setActiveTitle(t('list_declaration')));
-        const declarationTypeParams = searchParams.get('declaration_type');
+        const serviceCode = searchParams.get('service_code') || SERVICE_CODE.BHXH;
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
         const planParams = searchParams.get('plan');
@@ -180,19 +177,23 @@ export default function Declarations() {
         const dataFromUrl = {
             limit: limitParams || 10,
             page: pageParams || 1,
-            declarationType: declarationTypeParams || "",
+            serviceCode: serviceCode || "",
             medicalCode: medicalCodeParams || "",
             customerName: customerNameParams || "",
-            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : STATUS.ACTIVE,
+            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : "",
             plan: planParams || "",
             fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
-            toDate: toDateParams || today.format("YYYY-MM-DD")
+            toDate: toDateParams || today.format("YYYY-MM-DD"),
+            receiptFromDate: "",
+            receiptToDate: "",
+            fromMonth: "",
+            toMonth: ""
         }
 
         setFormData(dataFromUrl);
         setCurrentPage(dataFromUrl.page);
         setPageSize(dataFromUrl.limit);
-        getMedicals(dataFromUrl);
+        getOrders(dataFromUrl);
     },[searchParams])
 
     return (
@@ -204,8 +205,8 @@ export default function Declarations() {
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('type_declaration')}</label>
                             <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.declarationType || undefined} 
-                                onChange={(value) => handleValueChange("declarationType", value)}
+                                value={formData.serviceCode || undefined} 
+                                onChange={(value) => handleValueChange("serviceCode", value)}
                                 options={declarations.map((type) => ({
                                     value: type.code,
                                     label: `${type.name} (${type.acronym.toUpperCase()})`,
@@ -268,9 +269,9 @@ export default function Declarations() {
                             fieldTo="receiptToDate"
                             onChange={handleValueChange}
                         />
-                        {formData.declarationType && (
+                        {formData.serviceCode && (
                             <>
-                                {selectedDeclaration == 'bhxh' ? (
+                                {selectedDeclaration == SERVICE_CODE.BHXH ? (
                                     <DateRangePicker
                                         picker={"month"}
                                         label={t('from_month')}
@@ -312,7 +313,7 @@ export default function Declarations() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4 gap-2">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_declaration')}</h1>
-                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{mockData.length}</span>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
                         </div>
                         <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-[#2a5285] transition-colors">
                             <FontAwesomeIcon icon={faFileExport} />{t('export_excel')}
@@ -326,50 +327,84 @@ export default function Declarations() {
                                     <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                         <th className="px-4 py-3 border-r border-white text-center">{t('declaration_code')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('collector')}</th>
-                                        <th className="px-4 py-3 border-r border-white">{t('application_type')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('voucher_code')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('plan')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('participant_name')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('birthday')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('social_code')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('register_date')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('receipt_date')}</th>
-                                        <th className="px-4 py-3 border-r border-white">{t('commission_type')}</th>
                                         <th className="px-4 py-3 border-r border-white text-left">{t('status')}</th>
-                                        <th className="px-4 py-3 border-r border-white text-left">{t('doitac')}</th>
-                                        <th className="px-4 py-3 border-r border-white text-left">{t('thanhtoandoitac')}</th>
-                                        <th className="px-4 py-3 border-r border-white text-left">{t('lydohuy')}</th>
-                                        <th className="px-4 py-3 border-r border-white text-left">{t('tuthang')}</th>
-                                        <th className="px-4 py-3 border-r border-white text-left">{t('mucdong')}</th>
-                                        <th className="px-4 py-3 border-r border-white text-right">{t('contribution_amount')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-left">{t('partner_code')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-left">{t('partner_payment_status')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-left">{t('cancellation_reason')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-left">
+                                            {(formData.serviceCode == SERVICE_CODE.BHXH) ? t('from_month') : t('from_date_card')}
+                                        </th>
+                                        {formData.serviceCode != SERVICE_CODE.BHXH ? (
+                                            <th className="px-4 py-3 border-r border-white text-left">
+                                                {t('house_medical_amount')}
+                                            </th>
+                                        ) : (
+                                            <></>
+                                        )}
+                                        <th className="px-4 py-3 border-r border-white text-left">
+                                            {formData.serviceCode == SERVICE_CODE.BHXH ? t('social_amount') : t('medical_amount')}
+                                        </th>
+                                        <th className="px-4 py-3 border-r border-white text-right">
+                                            {formData.serviceCode == SERVICE_CODE.BHXH ? t('contribution_amount') : t('medical_ins_amount')}
+                                        </th>
                                         <th className="px-4 py-3 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {currentTableData.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                                    {orders && orders.map((order: any, idx: number) => (
+                                        <tr key={order.id} className="hover:bg-blue-50/30 transition-colors">
                                             <td className="px-4 py-3 text-[var(--global-main-color)] font-medium text-center">
-                                                <Link href={`/${locale}/dashboard/list-declaration/${row.id}`}>
-                                                    {row.id}
+                                                <Link href={`/${locale}/dashboard/list-declaration/${order.id}`}>
+                                                    {order.id}
                                                 </Link>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-600">{row.staff}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.type}</td>
-                                            <td className="px-4 py-3 font-medium text-gray-700">{row.name}</td>
-                                               <td className="px-4 py-3 text-gray-600">{row.date}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.code}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.date}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.date}</td>
-                                            <td className="px-4 py-3 text-gray-600">{row.payType == 0 ? t('commission_type_renewal') : t('commission_type_new')}</td>
+                                            <td className="px-4 py-3 text-gray-600">{order.user_id}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {getServiceNameFromCode(order.service_code)}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-gray-700">{order.ld_pa}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {
+                                                    formData.serviceCode == SERVICE_CODE.BHXH ? 
+                                                    order.data.d05_ts.noi_dung[0].ho_ten : 
+                                                    order.data.tk1_ts.noi_dung[0].ho_ten
+                                                }
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.data.tk1_ts.noi_dung[0].ngay_sinh}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {
+                                                    formData.serviceCode == SERVICE_CODE.BHXH ? 
+                                                    order.data.d05_ts.noi_dung[0].maso_bhxh :
+                                                    order.data.tk1_ts.noi_dung[0].maso_bhxh
+                                                }
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">{order.created_at}</td>
+                                            <td className="px-4 py-3 text-gray-600">{order.data.d05_ts.noi_dung[0].ngay_bien_lai}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="bg-teal-400 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
-                                                    {row.status == 0 ? t('not_recorded') : t('recorded') }
+                                                    {order.status == 0 ? t('not_recorded') : t('recorded') }
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right">31412SGAT-2412ZXCVAA</td>
-                                            <td className="px-4 py-3 text-right">{t('paid')}</td>
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold"></td>
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">04/2026</td>
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{row.amount}</td>
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{row.amount}</td>
+                                            <td className="px-4 py-3 text-right">{order.distributors_order_number}</td>
+                                            <td className="px-4 py-3 text-right">{order.distributors_order_status}</td>
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.comment}</td>
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.data.d05_ts.noi_dung[0].tuthang}</td>
+                                            {formData.serviceCode != SERVICE_CODE.BHXH ? (
+                                                <td className="px-4 py-3 border-r border-white text-left">100</td>
+                                            ) : (<></>)}
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.data.d05_ts.noi_dung[0].tongtien)}</td>
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">
+                                                {formatVND(order.data.d05_ts.noi_dung[0].tongtien - order.data.d05_ts.noi_dung[0].tien_hotro)}
+                                            </td>
                                             <td className="px-4 py-3 text-center text-gray-400 space-x-2 whitespace-nowrap">
                                                 <button className="hover:text-blue-600"><FontAwesomeIcon icon={faEdit} /></button>
                                                 <button className="hover:text-green-600"><FontAwesomeIcon icon={faDownload} /></button>
@@ -383,13 +418,10 @@ export default function Declarations() {
                         </div>
                         <Pagination
                             currentPage={currentPage}
-                            totalItems={mockData.length}
+                            totalItems={totalPage}
                             pageSize={pageSize}
-                            onPageChange={(page) => setCurrentPage(page)}
-                            onPageSizeChange={(size) => {
-                                setPageSize(size);
-                                setCurrentPage(1);
-                            }}
+                            onPageChange={(page) => handlePageChange(page)}
+                            onPageSizeChange={(limit) => handleLimitChange(limit)}
                         />
                     </div>
                 </div>

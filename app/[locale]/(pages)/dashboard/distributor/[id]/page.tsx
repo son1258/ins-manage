@@ -1,7 +1,7 @@
 "use client"
 
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux";
 import Cookies from 'js-cookie';
@@ -12,10 +12,12 @@ import Loading from "@/components/Loading";
 import InputGroup from "@/components/InputGroup";
 import { STATUS } from "@/constants";
 import { toast } from "react-toastify";
+import CustomSelect from "@/components/CustomSelect";
 
 export default function EditDistributor() {
     const t = useTranslations();
     const dispatch = useDispatch();
+    const locale = useLocale();
     const params: any = useParams();
     const router = useRouter();
     const accessToken = Cookies.get('accessToken');
@@ -59,7 +61,7 @@ export default function EditDistributor() {
             if (resp && resp.success) {
                 setDistributor(resp.data);
                 toast.success(t('success'))
-                router.back();
+                router.push(`/${locale}/dashboard/distributor`);
             }
         } catch(err: any) {
             console.log('Error get distributor: ', err);
@@ -107,19 +109,16 @@ export default function EditDistributor() {
                             required 
                         />
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
-                                {t('status')}
-                            </label>
-                            <select
-                                value={distributor.status}
-                                onChange={(e) => handleValueChange("status", e.target.value)}
-                                className="border border-gray-300 rounded px-2 py-1.5 text-sm outline-none bg-white transition-all h-8"
-                            >
-                                <option value="" disabled>{t('select_option')}</option>
-                                {listStatus.map((status) => (
-                                    <option key={status.code} value={status.code}>{status.name}</option>
-                                ))}
-                            </select>
+                            <label className="text-sm font-medium mb-1 text-gray-600">{t('status')}</label>
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={distributor.status} 
+                                onChange={(value) => handleValueChange("status", value)}
+                                options={listStatus.map((status: any) => ({
+                                    value: status.code,
+                                    label: status.name,
+                                }))}
+                            />
                         </div>
                     </div>
 

@@ -1,8 +1,12 @@
 "use client"
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import InputGroup from '@/components/InputGroup';
 import { useTranslations } from 'next-intl';
+import { useParams, useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
+import Cookies from 'js-cookie';
 
 interface CollectorForm {
     fullname: string;
@@ -13,6 +17,11 @@ interface CollectorForm {
 
 export default function EditColection() {
     const t = useTranslations();
+    const params: any = useParams();
+    const dispatch = useDispatch();
+    const router = useRouter();
+    const accessToken = Cookies.get('accessToken');
+    const [isLoading, setIsLoading] = useState(false);
 
     const listUnits = [
         {code: "BIPV01U", name: "PVI Thành phố Hồ Chí Minh", status: 0},
@@ -41,6 +50,27 @@ export default function EditColection() {
             [nameField]: value
         }))
     }
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t('update_collection')));
+        // const getDistributor = async () => {
+        //     if (!accessToken) return;
+        //     try {
+        //         setIsLoading(true);
+        //         const resp = await loadCollectionById(params.id, accessToken);
+        //         if (resp) {
+        //             setDistributor(resp.data);
+        //         }
+        //     } catch(err: any) {
+        //         console.log('Error get distributor: ', err);
+        //         handleApiError(err, t);
+        //     } finally {
+        //         setIsLoading(false);
+        //     }
+        // }
+    
+        // getDistributor();
+    }, [params.id])
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 md:p-8">
@@ -76,7 +106,7 @@ export default function EditColection() {
                                             value={formCollector.unit.code}
                                             onChange={(e) => handleValueChange("unit", e.target.value)}
                                             className="h-8 border border-gray-300 rounded px-3 text-sm bg-white outline-none focus:ring-1 focus:ring-blue-500 transition">
-                                            <option value="">{t('select_unit')}</option>
+                                            <option value="">{t('select_distributor')}</option>
                                             {listUnits.map((unit) => 
                                                 <option key={unit.code} value={unit.code}>{`${unit.name}`}</option>
                                             )}

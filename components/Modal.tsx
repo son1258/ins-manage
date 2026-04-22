@@ -1,35 +1,57 @@
+import { Modal as AntModal, Button } from 'antd';
 import { useTranslations } from "next-intl";
+import { ExclamationCircleFilled } from '@ant-design/icons';
 
 interface Props {
     isOpen: boolean;
     title: string;
     onConfirm: () => void;
     onClose: () => void;
+    loading?: boolean;
 }
 
-export default function Modal({isOpen, title, onConfirm, onClose} : Props) {
+export default function Modal({ isOpen, title, onConfirm, onClose, loading = false }: Props) {
     const t = useTranslations();
-    if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white p-6 rounded-sm shadow-2xl w-[90%] max-w-sm">
-                <h2 className="text-lg font-bold text-gray-800">{title}</h2>                
-                <div className="flex gap-3 mt-2">
-                    <button 
-                        onClick={onConfirm}
-                        className="flex-1 py-2 bg-[#926BFF] hover:bg-[#5e29f2] text-white rounded-lg font-medium transition-all"
-                    >
-                        {t('yes')}
-                    </button>
-                    <button 
-                        onClick={onClose}
-                        className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-all"
-                    >
-                        {t('no')}
-                    </button>
+        <AntModal
+            title={
+                <div className="flex items-center gap-2">
+                    <ExclamationCircleFilled className="text-amber-500 text-xl" />
+                    <span className="text-gray-800 font-bold">{t('confirmation')}</span>
                 </div>
+            }
+            open={isOpen}
+            onOk={onConfirm}
+            onCancel={onClose}
+            confirmLoading={loading}
+            centered
+            footer={[
+                <Button 
+                    key="back" 
+                    onClick={onClose}
+                    className="rounded-md border-gray-300 hover:text-gray-600"
+                >
+                    {t('no')}
+                </Button>,
+                <Button 
+                    key="submit" 
+                    type="primary" 
+                    loading={loading} 
+                    onClick={onConfirm}
+                    className="bg-[#926BFF] hover:bg-[#5e29f2] border-none rounded-md px-6"
+                >
+                    {t('yes')}
+                </Button>,
+            ]}
+            styles={{
+                mask: { backdropFilter: 'blur(4px)' }
+            }}
+            width={400}
+        >
+            <div className="py-4 text-gray-600 text-[15px]">
+                {title}
             </div>
-        </div>
-    )
+        </AntModal>
+    );
 }

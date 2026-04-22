@@ -35,9 +35,9 @@ const InputGroup = ({
                 value={value}
                 placeholder={placeholder}
                 readOnly={readOnly}
-                className={`border rounded px-2 py-1.5 text-sm outline-none transition-all h-8
+                className={`border rounded px-2 py-1.5 text-sm text-black outline-none transition-all h-8
                     ${isError 
-                        ? 'border-red-400 bg-red-50 text-red-700 font-bold'
+                        ? 'border-red-400 bg-red-50 text-red-700'
                         : 'border-gray-300 bg-white'
                     }
                     ${readOnly ? 'bg-gray-50 cursor-not-allowed' : ''}

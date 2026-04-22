@@ -3,22 +3,36 @@
 import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileAlt, faFileImport, faFileExport, faCalendarAlt, faPaperPlane, faCirclePlus, faQrcode, faChevronRight, faChevronDown} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Pagination from '@/components/Pagination';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
 import React from 'react';
 import CustomSelect from '@/components/CustomSelect';
 import DateRangePicker from '@/components/DateRangePicker';
+import { useDispatch } from 'react-redux';
+import Cookies from 'js-cookie';
+import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
+import { PAYMENT_STATUS, STATUS } from '@/constants';
+import { loadPayments } from '@/services/paymentService';
+import { handleApiError } from '@/utils/errorHandler';
+import dayjs from 'dayjs';
 
 export default function Payment() {
     const t = useTranslations();
     const router = useRouter();
     const locale = useLocale();
     const pathname = usePathname();
+    const dispatch = useDispatch();
+    const searchParams = useSearchParams();
+    const accessToken = Cookies.get('accessToken');
+    const today = dayjs();
+    const from = today.subtract(6, "day");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [payments, setPayments] = useState();
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const status = [
         {code: "01", name: t('recorded')},
@@ -73,10 +87,11 @@ export default function Payment() {
     ];
 
     const [formData, setFormData] = useState({
-        paymentCode: "",
-        status: "",
-        fromDate: "",
-        toDate: ""
+        status: PAYMENT_STATUS.PAID,
+        fromDate: from.format("YYYY-MM-DD"),
+        toDate: today.format("YYYY-MM-DD"),
+        limit: 10,
+        page: 1
     });
 
     const handleValueChange = (nameField: string, value: any) => {
@@ -103,9 +118,43 @@ export default function Payment() {
         console.log(formData)
     }
 
-    const handlePaymentRequest = () => {
-        router.push(`/${locale}/dashboard/payment/create-payment`);
+    const getPayments = async(data: any) => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadPayments(data, accessToken);
+            if (resp && resp.data) {
+                setPayments(resp.data);
+            }
+        } catch(err: any) {
+            console.log('Error get payments: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
     }
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t('payment_request')));
+        const fromDate = searchParams.get('from_date') || today.subtract(6, "days").format("YYYY-MM-DD");
+        const toDate = searchParams.get('to_date') || today.format("YYYY-MM-DD");
+        const status = searchParams.get('status');
+        const limit = Number(searchParams.get('limit')) || 10;
+        const page = Number(searchParams.get('page')) || 1;
+    
+        const dataFromUrl = {
+            fromDate: fromDate,
+            toDate: toDate,
+            status: (status !== "") ? Number(status) : STATUS.ACTIVE,
+            page: page,
+            limit: limit
+        };
+    
+        setFormData(dataFromUrl);
+        setPageSize(dataFromUrl.limit);
+        setCurrentPage(dataFromUrl.page);
+        getPayments(dataFromUrl);
+    },[searchParams])
 
     return (
         <div className="flex flex-col gap-3 text-black">
@@ -134,7 +183,7 @@ export default function Payment() {
                         </div>
                         
                         <DateRangePicker
-                            label={t('register_date')}
+                            label={t('create_date')}
                             fromDate={formData.fromDate}
                             toDate={formData.toDate}
                             fieldFrom="fromDate"
@@ -173,7 +222,7 @@ export default function Payment() {
                                 <FontAwesomeIcon icon={faFileAlt} />{t('download_file')}
                             </button>
                             <button 
-                                onClick={handlePaymentRequest}
+                                onClick={() => router.push(`/${locale}/dashboard/payment/create-payment`)}
                                 className="flex items-center gap-2 bg-gray-800 text-white px-2 py-1 text-xs cursor-pointer">
                                 <FontAwesomeIcon icon={faCirclePlus} />{t('create_payment_request')}
                             </button>

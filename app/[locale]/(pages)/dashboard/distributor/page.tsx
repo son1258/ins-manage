@@ -167,7 +167,7 @@ export default function DistributorManagement() {
             providerCode: "",
             distributorCode: code,
             distributorName: name,
-            status: (status !== null && status !== "") ? Number(status) : STATUS.ACTIVE,
+            status: (status !== "") ? Number(status) : STATUS.ACTIVE,
             page: page,
             limit: limit
         };

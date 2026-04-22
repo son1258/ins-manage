@@ -3,9 +3,15 @@ import { callApi } from "./callApi";
 export const loadDistributors = (params: any, token: string) => {
     let url = 'distributors';
     let queryParams: string[] = [];
-    queryParams.push(`limit=${params.limit}`)
-    queryParams.push(`page=${params.page}`)
-    queryParams.push(`status=${params.status}`)
+    if (params.limit) {
+        queryParams.push(`limit=${params.limit}`)
+    }
+    if (params.page) {
+        queryParams.push(`page=${params.page}`)
+    }
+    if (params.status) {
+        queryParams.push(`status=${params.status}`)
+    }
     if (params.distributorCode) {
         queryParams.push(`code=${params.distributorCode}`);
     }

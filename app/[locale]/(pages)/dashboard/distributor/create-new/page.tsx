@@ -110,7 +110,7 @@ export default function CreateNewDistributor() {
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm mb-1 font-medium text-gray-600">{t('social_ins_authority')}</label>
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('social_ins_authority')}<span className="text-red-500 mr-1">*</span></label>
                             <CustomSelect
                                 placeholder={t('select_option')}
                                 value={formData.providerId || undefined} 
