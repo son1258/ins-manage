@@ -10,9 +10,7 @@ import { useParams, useRouter } from "next/navigation";
 import { loadDistributorById, updateDistributor } from "@/services/distributorService";
 import Loading from "@/components/Loading";
 import InputGroup from "@/components/InputGroup";
-import { STATUS } from "@/constants";
 import { toast } from "react-toastify";
-import CustomSelect from "@/components/CustomSelect";
 
 export default function EditDistributor() {
     const t = useTranslations();
@@ -21,22 +19,21 @@ export default function EditDistributor() {
     const params: any = useParams();
     const router = useRouter();
     const accessToken = Cookies.get('accessToken');
-    const listStatus = [
-        {code: STATUS.ACTIVE, name: t('active')},
-        {code: STATUS.DEACTIVE, name: t('deactive')},
-    ]; 
-    const [distributor, setDistributor] = useState({
-        id: "",
-        name: "",
-        status: STATUS.ACTIVE
-    });
-    const [errors, setErrors] = useState<any>({
-        name: false,
-    });
+    const [distributor, setDistributor] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        distributorId: "",
+        distributorCode: "",
+        distributorName: ""
+    });
+
+    const [errors, setErrors] = useState<any>({
+        distributorCode: false,
+        distributorName: false
+    });
 
     const handleValueChange = (nameField: string, value: any) => {
-        setDistributor(prev => ({
+        setFormData(prev => ({
             ...prev,
             [nameField]: value
         }));
@@ -49,19 +46,41 @@ export default function EditDistributor() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!accessToken) return;
+        const hasError = Object.values(errors).some(value => value === true);
+        if (!accessToken || hasError) return;
         try {
             setIsLoading(true);
             const data = {
-                id: params.id,
-                name: distributor.name,
-                status: distributor.status
+                id: formData.distributorId,
+                code: formData.distributorCode,
+                name: formData.distributorName
             }
             const resp = await updateDistributor(data, accessToken);
             if (resp && resp.success) {
                 setDistributor(resp.data);
                 toast.success(t('success'))
                 router.push(`/${locale}/dashboard/distributor`);
+            }
+        } catch(err: any) {
+            console.log('Error update distributor: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const getDistributorById = async () => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const resp = await loadDistributorById(params.id, accessToken);
+            if (resp && resp.data) {
+                const data = {
+                    distributorId: resp.data.id,
+                    distributorCode: resp.data.code,
+                    distributorName: resp.data.name
+                }
+                setFormData(data);
             }
         } catch(err: any) {
             console.log('Error get distributor: ', err);
@@ -73,23 +92,7 @@ export default function EditDistributor() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t('update_distributor')));
-        const getDistributor = async () => {
-            if (!accessToken) return;
-            try {
-                setIsLoading(true);
-                const resp = await loadDistributorById(params.id, accessToken);
-                if (resp) {
-                    setDistributor(resp.data);
-                }
-            } catch(err: any) {
-                console.log('Error get distributor: ', err);
-                handleApiError(err, t);
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        getDistributor();
+        getDistributorById();
     }, [params.id])
     
     return (
@@ -102,24 +105,17 @@ export default function EditDistributor() {
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InputGroup 
-                            label={t('distributor_name')}
-                            value={distributor.name}
-                            onChange={(e) => handleValueChange("name", e.target.value)}
-                            isError={errors.name}
-                            required 
+                            label={t('distributor_code')}
+                            value={formData.distributorCode}
+                            onChange={(e) => handleValueChange("distributorCode", e.target.value)}
+                            isError={errors.distributorCode}
                         />
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium mb-1 text-gray-600">{t('status')}</label>
-                            <CustomSelect
-                                placeholder={t('select_option')}
-                                value={distributor.status} 
-                                onChange={(value) => handleValueChange("status", value)}
-                                options={listStatus.map((status: any) => ({
-                                    value: status.code,
-                                    label: status.name,
-                                }))}
-                            />
-                        </div>
+                        <InputGroup 
+                            label={t('distributor_name')}
+                            value={formData.distributorName}
+                            onChange={(e) => handleValueChange("distributorName", e.target.value)}
+                            isError={errors.distributorName}
+                        />
                     </div>
 
                     <div className="flex justify-end gap-3">

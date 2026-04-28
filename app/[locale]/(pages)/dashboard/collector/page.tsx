@@ -15,11 +15,11 @@ import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import CustomSelect from '@/components/CustomSelect';
 import { handleApiError } from '@/utils/errorHandler';
 import { loadDistributors } from '@/services/distributorService';
-import { disableCollection, loadCollections } from '@/services/collectionService';
+import { disableCollector, loadCollectors } from '@/services/collectorService';
 import Modal from '@/components/Modal';
 import { toast } from 'react-toastify';
 
-export default function Collection() {
+export default function Collector() {
     const t = useTranslations();
     const locale = useLocale();
     const router = useRouter();
@@ -32,8 +32,8 @@ export default function Collection() {
     const [isLoading, setIsLoading] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
     const [distributors, setDistributors] = useState<any[]>([]);
-    const [collections, setCollections] = useState<any[]>([]);
-    const [selectedCollection, setSelectedCollection] = useState<any>();
+    const [collectors, setCollectors] = useState<any[]>([]);
+    const [selectedCollector, setSelectedCollector] = useState<any>();
     const [openModal, setOpenModal] = useState(false);
 
     const listStatus = [
@@ -51,7 +51,7 @@ export default function Collection() {
     })
 
     const createNew = () => {
-        router.push(`/${locale}/dashboard/collection/create-new`)
+        router.push(`/${locale}/dashboard/collector/create-new`)
     }
 
     const handleValueChange = (nameField: string, value: any) => {
@@ -83,6 +83,20 @@ export default function Collection() {
         router.push(pathname);
     }
 
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', String(page));
+        handleValueChange('page', page);
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handleLimitChange = (limit: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('limit', String(limit));
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
     const getDistributors = async (data: any) => {
         if (!accessToken) return;
         try {
@@ -99,46 +113,46 @@ export default function Collection() {
         }
     }
 
-    const getCollections = async (distributorId: string) => {
+    const getCollectors = async (data: any) => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
-            const resp = await loadCollections(distributorId, accessToken);
+            const resp = await loadCollectors(data, accessToken);
             if (resp && resp.data) {
-                setCollections(resp.data);
+                setCollectors(resp.data);
                 setTotalItems(resp.data.length);
             }
         } catch(err: any) {
-            console.log('Error get distributors: ', err);
+            console.log('Error get collectors: ', err);
             handleApiError(err, t);
         } finally {
             setIsLoading(false);
         }
     }
 
-    const handleSelectDisableCollection = (item: any) => {
+    const handleSelectDisableCollector = (item: any) => {
         setOpenModal(!openModal);
-        setSelectedCollection(item);
+        setSelectedCollector(item);
     }
 
-    const updateStateCollection = async () => {
+    const updateStateCollector = async () => {
         try {
             if (!accessToken) return;
             setIsLoading(true);
             const data = {
-                id: selectedCollection.id,
-                code: selectedCollection.code,
-                name: selectedCollection.name,
-                distributor_id: selectedCollection.distributor_id
+                id: selectedCollector.id,
+                code: selectedCollector.code,
+                name: selectedCollector.name,
+                distributor_id: selectedCollector.distributor_id
             }
-            const resp = await disableCollection(data, accessToken);
+            const resp = await disableCollector(data, accessToken);
             if (resp && resp.success) {
                 setOpenModal(false);
                 toast.success(t('success'));
-                await getCollections(data.distributor_id);
+                handleRefresh();
             }
         } catch(err: any) {
-            console.log('Error disable distributor: ', err);
+            console.log('Error disable collector: ', err);
             handleApiError(err, t);
         } finally {
             setIsLoading(false);
@@ -146,36 +160,34 @@ export default function Collection() {
     }
 
     useEffect(() => {
-        dispatch(setActiveTitle(t('collection')));
-        const code = searchParams.get('code') || "";
-        const name = searchParams.get('name') || "";
-        const distributorId = searchParams.get('distributor_id') || "";
-        const status = searchParams.get('status');
-        const limit = Number(searchParams.get('limit')) || 10;
-        const page = Number(searchParams.get('page')) || 1;
+        dispatch(setActiveTitle(t('collector')));
+        const codeParams = searchParams.get('code') || "";
+        const nameParams = searchParams.get('name') || "";
+        const distributorIdParams = searchParams.get('distributor_id') || "";
+        const statusParams = searchParams.get('status');
+        const limitParams = Number(searchParams.get('limit')) || 10;
+        const pageParams = Number(searchParams.get('page')) || 1;
 
         const dataFromUrl = {
-            distributorId: distributorId,
-            collectorCode: code,
-            collectorName: name,
-            status: (status !== null && status !== "") ? Number(status) : STATUS.ACTIVE,
-            page: page,
-            limit: limit
+            distributorId: distributorIdParams,
+            collectorCode: codeParams,
+            collectorName: nameParams,
+            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : STATUS.ACTIVE,
+            page: pageParams,
+            limit: limitParams
         };
 
         setFormData(dataFromUrl);
         setPageSize(dataFromUrl.limit);
         setCurrentPage(dataFromUrl.page);
         getDistributors(dataFromUrl);
-        if (distributorId) {
-            getCollections(distributorId);
-        }
+        getCollectors(dataFromUrl);
     },[searchParams])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_collection')}</h2>
+                <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_collector')}</h2>
                 <button
                     onClick={createNew} 
                     className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-xs md:text-sm">
@@ -186,7 +198,7 @@ export default function Collection() {
             <div className="flex flex-col gap-4">
                 <form onSubmit={handleSearch}>
                     <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mb-6">
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
                                     {t('distributor_code')}
@@ -202,12 +214,12 @@ export default function Collection() {
                                 />
                             </div>
                              <InputGroup 
-                                label={t('collection_code')}
+                                label={t('collector_code')}
                                 value={formData.collectorCode}
                                 onChange={(e)=>handleValueChange("collectorCode", e.target.value)} 
                             />
                              <InputGroup 
-                                label={t('collection_name')}
+                                label={t('collector_name')}
                                 value={formData.collectorName}
                                 onChange={(e)=>handleValueChange("collectorName", e.target.value)} 
                             />
@@ -250,35 +262,35 @@ export default function Collection() {
                             <thead>
                                 <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                     <th className="px-4 py-3 border-r border-white text-center w-16">{t('index')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('collection_code')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('collection_name')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('collector_code')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('collector_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('status')}</th>
                                     <th className="px-4 py-3 text-center">{t('action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {collections.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                                {collectors.map((collector, index) => (
+                                    <tr key={collector.id} className="hover:bg-blue-50/30 transition-colors">
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
-                                        <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{item.code}</td>
-                                        <td className="px-4 py-3 text-gray-700">{item.name}</td>
+                                        <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{collector.code}</td>
+                                        <td className="px-4 py-3 text-gray-700">{collector.name}</td>
                                         <td className="px-4 py-3">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
-                                                item.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
+                                                collector.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
                                             }`}>
-                                                {item.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
+                                                {collector.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
                                             <button 
-                                                onClick={() => router.push(`/${locale}/dashboard/collection/${item.id}`)}
+                                                onClick={() => router.push(`/${locale}/dashboard/collector/${collector.id}`)}
                                                 className="hover:text-blue-600 transition-colors cursor-pointer"
                                             >
                                                 <FontAwesomeIcon icon={faEdit} />
                                             </button>
-                                            {item.status == STATUS.ACTIVE && (
+                                            {collector.status == STATUS.ACTIVE && (
                                                 <button 
-                                                    onClick={() => handleSelectDisableCollection(item)}
+                                                    onClick={() => handleSelectDisableCollector(collector)}
                                                     className="hover:text-red-600 transition-colors">
                                                         <FontAwesomeIcon icon={faTrashAlt} />
                                                 </button>
@@ -293,18 +305,15 @@ export default function Collection() {
                         currentPage={currentPage}
                         totalItems={totalItems}
                         pageSize={pageSize}
-                        onPageChange={(page) => setCurrentPage(page)}
-                        onPageSizeChange={(size) => {
-                            setPageSize(size);
-                            setCurrentPage(1);
-                        }}
+                        onPageChange={(page) => handlePageChange(page)}
+                        onPageSizeChange={(limit) => handleLimitChange(limit)}
                     />
                 </div>
             </div>
             <Modal 
                 isOpen={openModal} 
                 title={t('disable_distributor')} 
-                onConfirm={updateStateCollection} 
+                onConfirm={updateStateCollector} 
                 onClose={() => setOpenModal(false)} 
             />
             <Loading stateShow={isLoading} />

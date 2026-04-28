@@ -67,11 +67,14 @@ export default function DistributorManagement() {
         params.set('limit', String(formData.limit));
         params.set('page', '1');
         params.set('status', String(formData.status));
+        if (formData.providerCode) {
+            params.set('provider_code', formData.providerCode);
+        }
         if (formData.distributorCode) {
-            params.set('code', formData.distributorCode);
+            params.set('distributor_code', formData.distributorCode);
         }
         if (formData.distributorName) {
-            params.set('name', formData.distributorName);
+            params.set('distributor_name', formData.distributorName);
         }
         router.push(`${pathname}?${params.toString()}`);
     }
@@ -162,19 +165,20 @@ export default function DistributorManagement() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t('distributor')));
-        const code = searchParams.get('code') || "";
-        const name = searchParams.get('name') || "";
-        const status = searchParams.get('status');
-        const limit = Number(searchParams.get('limit')) || 10;
-        const page = Number(searchParams.get('page')) || 1;
+        const providerCodeParam = searchParams.get('provider_code') || "";
+        const distributorCodeParam = searchParams.get('distributor_code') || "";
+        const nameParam = searchParams.get('distributor_name') || "";
+        const statusParam = searchParams.get('status');
+        const limitParam = Number(searchParams.get('limit')) || 10;
+        const pageParam = Number(searchParams.get('page')) || 1;
 
         const dataFromUrl = {
-            providerCode: "",
-            distributorCode: code,
-            distributorName: name,
-            status: (status !== "") ? Number(status) : STATUS.ACTIVE,
-            page: page,
-            limit: limit
+            providerCode: providerCodeParam,
+            distributorCode: distributorCodeParam,
+            distributorName: nameParam,
+            status: (statusParam != "" && statusParam != null) ? Number(statusParam) : STATUS.ACTIVE,
+            page: pageParam,
+            limit: limitParam
         };
 
         setFormData(dataFromUrl);

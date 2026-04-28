@@ -12,6 +12,9 @@ export const loadDistributors = (params: any, token: string) => {
     if (params.status) {
         queryParams.push(`status=${params.status}`)
     }
+    if (params.providerCode) {
+        queryParams.push(`provider_code=${params.providerCode}`);
+    }
     if (params.distributorCode) {
         queryParams.push(`code=${params.distributorCode}`);
     }
@@ -23,7 +26,7 @@ export const loadDistributors = (params: any, token: string) => {
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
     }
-
+    console.log(url) 
     const resp = callApi(url, 'GET', {}, 'v1', token);
     return resp;
 }

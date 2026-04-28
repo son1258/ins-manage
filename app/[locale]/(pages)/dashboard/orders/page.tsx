@@ -1,6 +1,6 @@
 "use client"
 
-import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileExport } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
@@ -19,7 +19,6 @@ import CustomSelect from '@/components/CustomSelect';
 import dayjs from 'dayjs';
 import DateRangePicker from '@/components/DateRangePicker';
 import { formatVND } from '@/utils/common';
-import { loadUserById } from '@/services/userService';
 
 export default function Declarations() {
     const t = useTranslations();
@@ -36,7 +35,7 @@ export default function Declarations() {
     const [totalPage, setTotalPage] = useState(0);
     const [orders, setOrders] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedDeclaration, setSelectedDeclaration] = useState();
+    const [selectedDeclaration, setSelectedDeclaration] = useState(SERVICE_CODE.BHXH);
 
     const declarations = [
         {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
@@ -75,7 +74,8 @@ export default function Declarations() {
         serviceCode: SERVICE_CODE.BHXH,
         medicalCode: "",
         customerName: "",
-        status: "",
+        customerPhone: "",
+        status: STATUS.ACTIVE,
         plan: "",
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
@@ -114,6 +114,9 @@ export default function Declarations() {
         if (formData.plan) {
             params.set('plan', formData.plan);
         }
+        if (formData.customerPhone) {
+            params.set('customer_phone', formData.customerPhone);
+        }
         router.push(`${pathname}?${params.toString()}`);
     }
 
@@ -140,7 +143,6 @@ export default function Declarations() {
         try {
             setIsLoading(true);
             const resp = await loadOrders(data, accessToken);
-            console.log(resp)
             if (resp && resp.success) {
                 setOrders(resp.data);
                 setTotalPage(resp.paginate.total);
@@ -163,6 +165,7 @@ export default function Declarations() {
         const serviceCode = Number(searchParams.get('service_code')) || SERVICE_CODE.BHXH;
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
+        const customerPhoneParam = searchParams.get('customer_phone');
         const planParams = searchParams.get('plan');
         const fromDateParams = searchParams.get('from_date');
         const toDateParams = searchParams.get('to_date');
@@ -173,9 +176,10 @@ export default function Declarations() {
         const dataFromUrl = {
             limit: limitParams || 10,
             page: pageParams || 1,
-            serviceCode: serviceCode || "",
+            serviceCode: serviceCode || SERVICE_CODE.BHXH,
             medicalCode: medicalCodeParams || "",
             customerName: customerNameParams || "",
+            customerPhone: customerPhoneParam || "",
             status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : "",
             plan: planParams || "",
             fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
@@ -241,7 +245,7 @@ export default function Declarations() {
                                 placeholder={t('select_option')}
                                 value={formData.plan || undefined} 
                                 onChange={(value) => handleValueChange("plan", value)}
-                                options={(selectedDeclaration == 'bhxh' ? plans.bhxh : plans.bhythgd).map((type: any) => ({
+                                options={(selectedDeclaration == SERVICE_CODE.BHXH ? plans.bhxh : plans.bhythgd).map((type: any) => ({
                                     value: type.code,
                                     label: type.name,
                                 }))}
@@ -356,8 +360,8 @@ export default function Declarations() {
                                     {orders && orders.map((order: any, idx: number) => (
                                         <tr key={order.id} className="hover:bg-blue-50/30 transition-colors">
                                             <td className="px-4 py-3 text-[var(--global-main-color)] font-medium text-center">
-                                                <Link href={`/${locale}/dashboard/list-declaration/${order.id}`}>
-                                                    {order.id}
+                                                <Link href={`/${locale}/dashboard/orders/${order.order_number}`}>
+                                                    {order.order_number}
                                                 </Link>
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
