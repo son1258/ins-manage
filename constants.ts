@@ -42,3 +42,18 @@ export const PAYMENT_STATUS = {
     PAID: 1,
     PARTNER_PAID: 6
 }
+
+export const GENDER = {
+    MALE: 0,
+    FEMALE: 1
+}
+
+export const NATIONAL = {
+    VN: 'vn'
+}
+
+export const BIRTHDAY_VALUE = {
+    FULL: 0,
+    MONTH_AND_YEAR: 1,
+    ONLY_YEAR: 2
+}

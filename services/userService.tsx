@@ -1,29 +1,21 @@
 import { callApi } from "./callApi"
 
-export const loadCollectors = (params: any, token: string) => {
+export const loadListUsers = (params: any, token: string) => {
     let url = 'users';
     let queryParams: string[] = [];
     queryParams.push(`limit=${params.limit}`)
     queryParams.push(`page=${params.page}`)
     queryParams.push(`status=${params.status}`)
-    if (params.collectorName) {
-        queryParams.push(`fullname=${params.collectorName}`);
+    if (params.username) {
+        queryParams.push(`username=${params.username}`);
     }
-    if (params.collectorCode) {
-        queryParams.push(`collector_code=${params.collectorName}`);
-    }
-    if (params.distributorCode) {
-        queryParams.push(`code=${params.distributorCode}`);
-    }
-    if (params.distributorName) {
-        queryParams.push(`name=${params.distributorName}`)
+    if (params.fullname) {
+        queryParams.push(`fullname=${params.fullname}`);
     }
 
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
     }
-
-
     const resp = callApi(url, 'GET', {}, 'v1', token);
     return resp;
 }
@@ -35,7 +27,25 @@ export const login = (data: any) => {
 }
 
 export const loadUserById = (id: string, token: string) => {
-    let url = `users?id=${id}`;
+    let url = `user?id=${id}`;
     const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
+}
+
+export const createNewUser = (data: any, token: string) => {
+    const url = 'user/register';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}
+
+export const disableUser = (data: any, token: string) => {
+    const url = 'user/disable';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}
+
+export const updateUser = (data: any, token: string) => {
+    const url = 'user/update';
+    const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }

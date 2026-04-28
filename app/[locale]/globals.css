@@ -62,3 +62,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border: 1px solid #d1d5db !important;
   box-shadow: none !important;
 }
+
+.custom-date-picker .ant-picker {
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
+}
+
+.custom-date-picker:hover,
+.custom-date-picker.ant-picker-focused {
+  border: 1px solid #d1d5db !important;
+  box-shadow: none !important;
+}
+
+.custom-date-picker.ant-picker-disabled {
+    background-color: #fff !important;
+    color: rgba(0, 0, 0, 0.88) !important;
+    cursor: default;
+}
+
+.custom-date-picker.ant-picker-disabled input {
+    color: rgba(0, 0, 0, 0.88) !important;
+    cursor: default;
+}

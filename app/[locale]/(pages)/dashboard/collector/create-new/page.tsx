@@ -3,7 +3,7 @@
 import CustomSelect from '@/components/CustomSelect';
 import InputGroup from '@/components/InputGroup';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
@@ -11,10 +11,13 @@ import Loading from '@/components/Loading';
 import { loadDistributors } from '@/services/distributorService';
 import { handleApiError } from '@/utils/errorHandler';
 import { toast } from 'react-toastify';
-import { createCollection } from '@/services/collectionService';
+import { createCollector } from '@/services/collectorService';
+import { useRouter } from 'next/navigation';
 
-export default function CreateCollection() {
+export default function CreateCollector() {
     const t = useTranslations();
+    const router = useRouter();
+    const locale = useLocale();
     const dispatch = useDispatch();
     const accessToken = Cookies.get('accessToken');
     const [isLoading, setIsLoading] = useState(false);
@@ -84,13 +87,13 @@ export default function CreateCollection() {
                 name: formData.name
             }
             if (!accessToken) return;
-            const resp = await createCollection(data, accessToken);
+            const resp = await createCollector(data, accessToken);
             if (resp && resp.success) {
                 toast.success(t('success'));
-                resetForm();
+                router.back();
             }
         } catch (err: any) {
-            console.log('Error create collection:', err.message);
+            console.log('Error create collector:', err.message);
             handleApiError(err, t);
         } finally {
             setIsLoading(false);
@@ -133,7 +136,7 @@ export default function CreateCollection() {
                             required 
                         />
                         <InputGroup 
-                            label={t('collection_name')}
+                            label={t('collector_name')}
                             onChange={(e) => handleValueChange("name", e.target.value)}
                             value={formData.name}
                             isError={errors.name}

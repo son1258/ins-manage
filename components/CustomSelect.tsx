@@ -14,16 +14,18 @@ interface Props {
     placeholder?: string;
     disabled?: boolean;
     className?: string;
+    mode?: "multiple" | "tags";
 }
 
-const CustomSelect = ({
+export default function CustomSelect({
     value,
     onChange,
     options,
     placeholder,
     disabled = false,
     className = "",
-}: Props) => {
+    mode,
+}: Props) {
   return (
     <ConfigProvider
         theme={{
@@ -40,6 +42,8 @@ const CustomSelect = ({
         }}
     >
         <Select
+            mode={mode}
+            maxTagCount="responsive"
             value={value}
             onChange={onChange}
             options={options}
@@ -50,5 +54,3 @@ const CustomSelect = ({
     </ConfigProvider>
   );
 };
-
-export default CustomSelect;

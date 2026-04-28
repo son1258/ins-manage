@@ -9,7 +9,8 @@ import {
     faBars,
     faBuilding,
     faUserTie,
-    faCashRegister
+    faCashRegister,
+    faUser
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocale, useTranslations } from 'next-intl';
 import Cookies from 'js-cookie';
@@ -57,7 +58,8 @@ export default function SideBar() {
             category: t("ctg_manager").toUpperCase(),
             items: [
                 { icon: faBuilding, label: t('distributor'), link: "distributor", allowedRoles: ['admin', 'user'] },
-                { icon: faCashRegister, label: t('collection'), link: "collection", allowedRoles: ['admin', 'user'] },
+                { icon: faCashRegister, label: t('collector'), link: "collector", allowedRoles: ['admin', 'user'] },
+                { icon: faUser, label: t('user'), link: "user", allowedRoles: ['admin', 'user'] },
             ]
         },
         {
@@ -69,7 +71,7 @@ export default function SideBar() {
         {
             category: t("ctg_report").toUpperCase(),
             items: [
-                { icon: faChartLine, label: t('list_declaration'), link: "list-declaration", allowedRoles: ['admin', 'user'] },
+                { icon: faChartLine, label: t('list_declaration'), link: "orders", allowedRoles: ['admin', 'user'] },
             ]
         },
     ];
