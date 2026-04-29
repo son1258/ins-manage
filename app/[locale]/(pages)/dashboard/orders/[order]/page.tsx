@@ -118,7 +118,6 @@ import { loadOrders } from "@/services/orderService";
                 healthInsBenefitLevel: isBHXH ? "" : dataOrder.data.d03_ts.noi_dung[0].muc_huong
             }
             setFamily(dataOrder.data.tk1_ts.noi_dung[0].ho_gia_dinh.thanh_vien);
-            console.log(getDataOrder)
             setFormData(getDataOrder);
         }
 

@@ -44,6 +44,26 @@ export const loadOrders = (params: any, token: string) => {
     return resp;
 }
 
+export const loadListOrderByBatchPaymentId = (data: any, token: string) => {
+    let url = `dvc/orders`;
+    const queryParams: string[] = [];
+    if (data.limit) {
+        queryParams.push(`limit=${data.limit}`)
+    }
+    if (data.page) {
+        queryParams.push(`page=${data.page}`)
+    }
+    if (data.batchPaymentId) {
+        queryParams.push(`batch_payment_id=${data.batchPaymentId}`)
+    }
+    
+    if (queryParams.length > 0) {
+        url += `?${queryParams.join("&")}`
+    }
+    const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
+}
+
 export const loadInfoFromSocialCode = (id: string, token: string) => {
     const url = 'bhxh/info/bhxhinfo';
 

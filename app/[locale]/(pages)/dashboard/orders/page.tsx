@@ -138,6 +138,11 @@ export default function Declarations() {
         router.push(`${pathname}?${params.toString()}`);
     }
 
+    const getDateViaServiceCode = (serviceCode: any, date: any) => {
+        if (!date) return "";
+        return Number(serviceCode) == SERVICE_CODE.BHXH ? dayjs(date).format("MM-YYYY") : dayjs(date).format("DD-MM-YYYY");                                         
+    } 
+
     const getOrders = async (data: any) => {
         if (!accessToken) return;
         try {
@@ -326,7 +331,7 @@ export default function Declarations() {
                                 <thead>
                                     <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                         <th className="px-4 py-3 border-r border-white text-center">{t('declaration_code')}</th>
-                                        <th className="px-4 py-3 border-r border-white">{t('collector')}</th>
+                                        <th className="px-4 py-3 border-r border-white">{t('user')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('voucher_code')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('plan')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('participant_name')}</th>
@@ -376,31 +381,11 @@ export default function Declarations() {
                                                     order.ld_pa == PLANS.RENEWAL ? t('renewal') : t('decrease')
                                                 }
                                             </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {
-                                                    formData.serviceCode == SERVICE_CODE.BHXH ? 
-                                                    order.data.d05_ts?.noi_dung[0].ho_ten : 
-                                                    order.data.tk1_ts?.noi_dung[0].ho_ten
-                                                }
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {order.data.tk1_ts.noi_dung[0].ngay_sinh}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {
-                                                    formData.serviceCode == SERVICE_CODE.BHXH ? 
-                                                    order.ld_maso_bhxh :
-                                                    order.data.tk1_ts.noi_dung[0].maso_bhxh
-                                                }
-                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">{order.ld_name}</td>
+                                            <td className="px-4 py-3 text-gray-600">{dayjs(order.ld_dob).format("DD-MM-YYYY")}</td>
+                                            <td className="px-4 py-3 text-gray-600">{order.ld_maso_bhxh}</td>
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD/MM/YYYY")}</td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {
-                                                    formData.serviceCode == SERVICE_CODE.BHXH ?  
-                                                    order.data.d05_ts?.noi_dung[0].ngay_bien_lai : 
-                                                    order.data.d03_ts?.noi_dung[0].ngay_bien_lai
-                                                }
-                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">{order.ngay_bien_lai}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
                                                     {order.status == PAYMENT_STATUS.RECORDED ? t('recorded') : t('paid') }
@@ -414,23 +399,13 @@ export default function Declarations() {
                                             </td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{order.comment}</td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">
-                                                {   
-                                                    formData.serviceCode == SERVICE_CODE.BHXH ? 
-                                                    order.data.d05_ts?.noi_dung[0].tuthang : 
-                                                    order.data.d03_ts?.noi_dung[0].tu_ngay
-                                                }
+                                                {getDateViaServiceCode(order.service_code, order.start_date)}
                                             </td>
                                             {formData.serviceCode != SERVICE_CODE.BHXH ? (
                                                 <td className="px-4 py-3 border-r border-white text-left">100</td>
                                             ) : (<></>)}
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
-                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">
-                                                {
-                                                    formData.serviceCode == SERVICE_CODE.BHXH ?
-                                                    formatVND(order.data.d05_ts?.noi_dung[0].tongtien) :
-                                                    formatVND(order.data.d03_ts?.noi_dung[0].tien_dong)
-                                                }
-                                            </td>
+                                            <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.base_amount)}</td>
                                         </tr>
                                     ))}
                                 </tbody>

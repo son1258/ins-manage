@@ -1,12 +1,8 @@
 "use client"
 
-import InfoItem from '@/components/InfoItem';
-import { faCopy, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useSelector } from 'react-redux'; 
-import { toast } from 'react-toastify';
 import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
 import { createNewPayment } from '@/services/paymentService';

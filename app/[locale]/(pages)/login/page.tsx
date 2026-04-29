@@ -61,7 +61,6 @@ export default function Login() {
                 password: formLogin.password
             }
             const resp = await login(data);
-            console.log(resp)
             if (resp && resp.success) {
                 Cookies.set("userRole", resp.data.role, { path: '/' });
                 Cookies.set("accessToken", resp.data.access_token, {

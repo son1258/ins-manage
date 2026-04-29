@@ -44,7 +44,7 @@ export default function CreatePaymentRequest() {
     
     const [formData, setFormData] = useState<any>({
         serviceCode: "",
-        socialCode: "",
+        medicalCode: "",
         customerName: "",
         status: "",
         plan: "",
@@ -159,7 +159,7 @@ export default function CreatePaymentRequest() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t('list_declaration')));
-        const serviceCode = searchParams.get('service_code');
+        const serviceCode = Number(searchParams.get('service_code'));
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
         const planParams = searchParams.get('plan');
@@ -196,27 +196,27 @@ export default function CreatePaymentRequest() {
     }, []);
 
     useEffect(() => {
-    dispatch(setSelectedIds(listDeclarationCode));
+        dispatch(setSelectedIds(listDeclarationCode));
 
-    const total = orders
-        .filter(item => listDeclarationCode.includes(item.id))
-        .reduce((sum, item) => {
-            const rawAmount = item.service_code == SERVICE_CODE.BHXH 
-                ? item.data.d05_ts.noi_dung[0].tongtien
-                : item.data.d03_ts.noi_dung[0].tien_dong;
+        const total = orders
+            .filter(item => listDeclarationCode.includes(item.id))
+            .reduce((sum, item) => {
+                const rawAmount = item.service_code == SERVICE_CODE.BHXH 
+                    ? item.data.d05_ts.noi_dung[0].tongtien
+                    : item.data.d03_ts.noi_dung[0].tien_dong;
 
-            let num = 0;
-            if (typeof rawAmount === 'string') {
-                num = parseInt(rawAmount.replace(/\./g, '')) || 0;
-            } else if (typeof rawAmount === 'number') {
-                num = rawAmount;
-            }
+                let num = 0;
+                if (typeof rawAmount === 'string') {
+                    num = parseInt(rawAmount.replace(/\./g, '')) || 0;
+                } else if (typeof rawAmount === 'number') {
+                    num = rawAmount;
+                }
 
-            return sum + num;
-        }, 0);
+                return sum + num;
+            }, 0);
 
-    dispatch(setTotalAmount(total));
-}, [listDeclarationCode, orders, dispatch]);
+        dispatch(setTotalAmount(total));
+    }, [listDeclarationCode, orders, dispatch]);
 
     return (
         <div className="flex flex-col gap-3 text-black">
@@ -226,7 +226,7 @@ export default function CreatePaymentRequest() {
                         {t('search')}
                     </h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-3 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mb-6">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('type_declaration')}</label>
                             <CustomSelect
@@ -242,8 +242,8 @@ export default function CreatePaymentRequest() {
 
                         <InputGroup 
                             label={t('social_code')}
-                            value={formData.socialCode}
-                            onChange={(e)=>handleValueChange("socialCode", e.target.value)}
+                            value={formData.medicalCode}
+                            onChange={(e)=>handleValueChange("medicalCode", e.target.value)}
                         />
 
                         <InputGroup 

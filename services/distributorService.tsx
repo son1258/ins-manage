@@ -26,7 +26,6 @@ export const loadDistributors = (params: any, token: string) => {
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
     }
-    console.log(url) 
     const resp = callApi(url, 'GET', {}, 'v1', token);
     return resp;
 }

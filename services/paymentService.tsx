@@ -9,7 +9,7 @@ export const loadPayments = (params: any, token: string) => {
     if (params.page) {
         queryParams.push(`page=${params.page}`)
     }
-    if (params.status != null || params.status != "") {
+    if (params.status !== "") {
         queryParams.push(`status=${params.status}`)
     }
     if (params.fromDate) {
@@ -17,6 +17,9 @@ export const loadPayments = (params: any, token: string) => {
     }
     if (params.toDate) {
         queryParams.push(`to_date=${params.toDate}`)
+    }
+    if (params.paymentCode) {
+        queryParams.push(`code=${params.paymentCode}`)
     }
 
     if (queryParams.length > 0) {
