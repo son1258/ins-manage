@@ -2,7 +2,6 @@ import { callApi } from "./callApi";
 
 export const loadCollectors = (params: any, token: string) => {
     let url = `collectors`;
-    console.log(params)
     let queryParams: string[] = [];
     if (params.limit) {
         queryParams.push(`limit=${params.limit}`);

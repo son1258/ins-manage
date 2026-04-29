@@ -43,6 +43,11 @@ export const PAYMENT_STATUS = {
     PARTNER_PAID: 6
 }
 
+export const PAYMENT_REQUEST_STATUS = {
+    PAID: 0,
+    UNPAID: 1
+}
+
 export const GENDER = {
     MALE: 0,
     FEMALE: 1

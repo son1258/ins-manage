@@ -13,12 +13,15 @@ import DateRangePicker from '@/components/DateRangePicker';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { PAYMENT_STATUS, STATUS } from '@/constants';
-import { loadPayments } from '@/services/paymentService';
+import { PAYMENT_REQUEST_STATUS, PAYMENT_STATUS, SERVICE_CODE, STATUS } from '@/constants';
+import { loadPayments, terminatePayment } from '@/services/paymentService';
 import { handleApiError } from '@/utils/errorHandler';
 import dayjs from 'dayjs';
 import InfoItem from '@/components/InfoItem';
 import { formatVND } from '@/utils/common';
+import { loadListOrderByBatchPaymentId, loadOrders } from '@/services/orderService';
+import { toast } from 'react-toastify';
+import Loading from '@/components/Loading';
 
 export default function Payment() {
     const t = useTranslations();
@@ -37,16 +40,21 @@ export default function Payment() {
     const [isLoading, setIsLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [selectItem, setSelectItem] = useState<any>();
+    const [listOrders, setListOrders] = useState<any>();
+    const [selectedOrder, setSelectedOrder] = useState<any>();
+    const [subPage, setSubPage] = useState(1);
+    const [subLimit, setSubLimit] = useState(5);
+    const [currentSubPage, setCurrentSubPage] = useState(1);
+    const [subPageSize, setSubPageSize] = useState(10);
 
     const status = [
-        {code: "01", name: t('recorded')},
-        {code: "02", name: t('pending_payment')},
-        {code: "03", name: t('paid')},
-        {code: "04", name: t('record_created')},
-        {code: "05", name: t('sumitted')},
-        {code: "06", name: t('approved_by_social_ins')},
-        {code: "07", name: t('returned_by_social_ins')},
-        {code: "08", name: t('cancelled_declaration')},
+        {code: PAYMENT_REQUEST_STATUS.PAID, name: t('paid')},
+        {code: PAYMENT_REQUEST_STATUS.UNPAID, name: t('pending_payment')},
+    ]
+
+    const declarations = [
+        {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
+        {code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd"},
     ]
 
     const [formData, setFormData] = useState<any>({
@@ -78,12 +86,83 @@ export default function Payment() {
         router.push(pathname);
     }
 
-    const indexOfLastItem = currentPage * pageSize;
-    const indexOfFirstItem = indexOfLastItem - pageSize;
-
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log(formData)
+        const params = new URLSearchParams();
+        params.set('limit', String(formData.limit));
+        params.set('page', '1');
+        params.set('status', String(formData.status));
+        params.set('from_date', String(formData.fromDate));
+        params.set('to_date', String(formData.toDate));
+        if (formData.paymentCode) {
+            params.set('payment_code', formData.paymentCode);
+        }
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', String(page));
+        handleValueChange('page', page);
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handleLimitChange = (limit: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('limit', String(limit));
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handleSubPageChange = (page: number) => {
+        setSubPage(page);
+        getListOrders(selectedOrder.listOrderIds);
+    }
+
+    const handleSubLimitChange = (limit: number) => {
+        setSubLimit(limit);
+        getListOrders(selectedOrder.listOrderIds);
+    }
+
+    const handleTerminatePayment = async (batchPaymentId: string) => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const data = {
+                batch_payment_id: batchPaymentId
+            }
+            const resp = await terminatePayment(data, accessToken);
+            if (resp && resp.success) {
+                toast.success(t('success'));
+                handleRefresh();
+            }
+        } catch(err: any) {
+            console.log('Error terminate payment: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const getListOrders = async (batchPaymentId: any) => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const data = {
+                page: subPage,
+                limit: subLimit,
+                batchPaymentId: batchPaymentId
+            }
+            const resp = await loadListOrderByBatchPaymentId(data, accessToken);
+            if (resp && resp.data) {
+                setListOrders(resp.data);
+            }
+        } catch(err: any) {
+            console.log('Error get list orders: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     const getPayments = async(data: any) => {
@@ -102,21 +181,33 @@ export default function Payment() {
         }
     }
 
+    const getServiceNameFromCode = (serviceCode: number) => {
+        const find = declarations.find((item: any) => item.code == serviceCode);
+        return find?.acronym.toUpperCase();
+    }
+
+    useEffect(() => {
+        if (!selectedOrder) return;
+        setListOrders([]);
+        getListOrders(selectedOrder.id);
+    },[selectedOrder])
+
     useEffect(() => {
         dispatch(setActiveTitle(t('payment_request')));
-        const fromDate = searchParams.get('from_date') || today.subtract(6, "days").format("YYYY-MM-DD");
-        const toDate = searchParams.get('to_date') || today.format("YYYY-MM-DD");
-        const status = searchParams.get('status');
-        const limit = Number(searchParams.get('limit')) || 10;
-        const page = Number(searchParams.get('page')) || 1;
+        const fromDateParam = searchParams.get('from_date') || today.subtract(6, "days").format("YYYY-MM-DD");
+        const toDateParam = searchParams.get('to_date') || today.format("YYYY-MM-DD");
+        const statusParam = searchParams.get('status');
+        const limitParam = Number(searchParams.get('limit')) || 10;
+        const pageParam = Number(searchParams.get('page')) || 1;
+        const paymentCodeParam = searchParams.get('payment_code');
     
         const dataFromUrl = {
-            paymentCode: "",
-            fromDate: fromDate,
-            toDate: toDate,
-            status: (status !== null && status !== "") ? Number(status) : "",
-            page: page,
-            limit: limit
+            paymentCode: paymentCodeParam,
+            fromDate: fromDateParam,
+            toDate: toDateParam,
+            status: (statusParam !== null && statusParam !== "") ? Number(statusParam) : "",
+            page: pageParam,
+            limit: limitParam
         };
     
         setFormData(dataFromUrl);
@@ -214,73 +305,94 @@ export default function Payment() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {payments.map((row) => (
-                                        <React.Fragment key={row.id}>
+                                    {payments.map((payment) => (
+                                        <React.Fragment key={payment.id}>
                                             <tr 
-                                                className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === row.id ? 'bg-blue-50/50' : ''}`}
-                                                onClick={() => toggleRow(row.id)}
+                                                className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
+                                                onClick={() => toggleRow(payment.id)}
                                             >
                                                 <td className="px-4 py-3 text-center">
                                                     <FontAwesomeIcon 
-                                                        icon={expandedRow === row.id ? faChevronDown : faChevronRight} 
+                                                        onClick={() => setSelectedOrder(payment)}
+                                                        icon={expandedRow === payment.id ? faChevronDown : faChevronRight} 
                                                         className="text-gray-400 text-xs"
                                                     />
                                                 </td>
-                                                <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center">{row.id}</td>
-                                                <td className="px-4 py-3 text-gray-600">{row.staff}</td>
-                                                <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(row.amount)}</td>
+                                                <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center">{payment.code}</td>
+                                                <td className="px-4 py-3 text-gray-600">{payment.user.fullname}</td>
+                                                <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(payment.amount)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`${row.status === 0 ? "bg-amber-400" : "bg-blue-500"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
-                                                        {row.status === 0 ? "Chưa thanh toán" : "Đã thanh toán"}
+                                                    <span className={`${payment.status == PAYMENT_REQUEST_STATUS.UNPAID ? "bg-amber-400" : "bg-blue-500"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
+                                                        {payment.status == PAYMENT_REQUEST_STATUS.UNPAID ? t('pending_payment') : t('paid')}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600">{dayjs(row.created_at).format("DD-MM-YYYY")}</td>
-                                                <td className="px-4 py-3 text-gray-600">{row.payment_date || "-"}</td>
+                                                <td className="px-4 py-3 text-gray-600">{dayjs(payment.created_at).format("DD-MM-YYYY")}</td>
+                                                <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
                                                     <button 
-                                                        onClick={() => handleShowOr(row)}
+                                                        onClick={() => handleShowOr(payment)}
 
                                                         className="hover:text-blue-600">
                                                         <FontAwesomeIcon icon={faQrcode} />
                                                     </button>
-                                                    {row.status === 0 && <button className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} /></button>}
+                                                    {payment.status == PAYMENT_REQUEST_STATUS.UNPAID && 
+                                                        <button
+                                                            onClick={() => handleTerminatePayment(payment.id)} 
+                                                            className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
+                                                        </button>
+                                                    }
                                                 </td>
                                             </tr>
 
-                                            {/* {expandedRow === row.id && (
-                                                <tr>
-                                                    <td colSpan={8} className="bg-orange-50/30 p-0">
-                                                        <div className="overflow-x-auto">
-                                                            <table className="w-full text-[12px] border-t border-orange-100">
-                                                                <thead>
-                                                                    <tr className="text-gray-500 font-semibold border-b border-orange-100">
-                                                                        <th className="pl-14 py-2">Mã YCTT</th>
-                                                                        <th className="px-4 py-2">Nhân viên thu</th>
-                                                                        <th className="px-4 py-2">Loại hồ sơ</th>
-                                                                        <th className="px-4 py-2">Mã số BHXH</th>
-                                                                        <th className="px-4 py-2">Họ tên</th>
-                                                                        <th className="px-4 py-2 text-right">Số tiền</th>
-                                                                        <th className="px-4 py-2 text-center">Ngày đăng ký</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {row.details.map((detail: any) => (
-                                                                        <tr key={detail.id} className="border-b border-orange-50 last:border-0">
-                                                                            <td className="pl-14 py-2 text-blue-600">{detail.id}</td>
-                                                                            <td className="px-4 py-2">{detail.staff}</td>
-                                                                            <td className="px-4 py-2">{detail.type}</td>
-                                                                            <td className="px-4 py-2 font-mono">{detail.bhxh_code}</td>
-                                                                            <td className="px-4 py-2 font-medium">{detail.name}</td>
-                                                                            <td className="px-4 py-2 text-right text-teal-600 font-bold">{detail.price}</td>
-                                                                            <td className="px-4 py-2 text-center">{detail.date}</td>
+                                            {expandedRow === payment.id && listOrders && (
+                                                <>
+                                                    <tr>
+                                                        <td colSpan={8} className="bg-orange-50/30 p-0">
+                                                            <div className="overflow-x-auto">
+                                                                <table className="w-full text-[12px] border-t border-orange-100">
+                                                                    <thead>
+                                                                        <tr className="text-gray-500 font-semibold border-b border-orange-100">
+                                                                            <th className="pl-14 py-2">{t('declaration_code')}</th>
+                                                                            <th className="px-4 py-2">{t('user')}</th>
+                                                                            <th className="px-4 py-2">{t('application_type')}</th>
+                                                                            <th className="px-4 py-2">{t('social_code')}</th>
+                                                                            <th className="px-4 py-2">{t('fullname')}</th>
+                                                                            <th className="px-4 py-2 text-right">{t('total_amount')}</th>
+                                                                            <th className="px-4 py-2 text-center">{t('register_date')}</th>
                                                                         </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )} */}
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {listOrders.map((order: any) => (
+                                                                            <tr key={order.order_number} className="border-b border-orange-50 last:border-0">
+                                                                                <td className="pl-14 py-2 text-blue-600">{order.order_number}</td>
+                                                                                <td className="px-4 py-2">{order.user.fullname}</td>
+                                                                                <td className="px-4 py-2">{getServiceNameFromCode(order.service_code)}</td>
+                                                                                <td className="px-4 py-2 font-mono">{order.ld_maso_bhxh}</td>
+                                                                                <td className="px-4 py-2 font-medium">{order.ld_name}</td>
+                                                                                <td className="px-4 py-2 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
+                                                                                <td className="px-4 py-2 text-center">{dayjs(order.created_date).format("DD-MM-YYYY")}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr className="bg-orange-50/30">
+                                                        <td colSpan={8} className="px-4 py-2 border-b border-orange-100">
+                                                            <div className="w-full"> 
+                                                                <Pagination
+                                                                    currentPage={currentSubPage}
+                                                                    totalItems={listOrders.length || 0}
+                                                                    pageSize={subPageSize}
+                                                                    onPageChange={(page) => handleSubPageChange(page)}
+                                                                    onPageSizeChange={(limit) => handleSubLimitChange(limit)}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </>
+                                            )}
                                         </React.Fragment>
                                     ))}
                                 </tbody>
@@ -290,86 +402,77 @@ export default function Payment() {
                             currentPage={currentPage}
                             totalItems={payments.length}
                             pageSize={pageSize}
-                            onPageChange={(page) => setCurrentPage(page)}
-                            onPageSizeChange={(size) => {
-                                setPageSize(size);
-                                setCurrentPage(1);
-                            }}
+                            onPageChange={(page) => handlePageChange(page)}
+                            onPageSizeChange={(limit) => handleLimitChange(limit)}
                         />
                     </div>
                 </div>
-                {showModal && selectItem && ( // Thêm kiểm tra selectItem để tránh lỗi crash
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden relative animate-in fade-in zoom-in duration-200">
-            {/* Header */}
-            <div className="flex justify-between items-center px-6 py-3 border-b border-gray-100">
-                <h3 className="text-base font-semibold text-gray-800">
-                    {t('transfer_info')}
-                </h3>
-                <button 
-                    onClick={() => setShowModal(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                    <FontAwesomeIcon icon={faTimes} size="lg" />
-                </button>
-            </div>
+                {showModal && selectItem && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden relative animate-in fade-in zoom-in duration-200">
+                            <div className="flex justify-between items-center px-6 py-3 border-b border-gray-100">
+                                <h3 className="text-base font-semibold text-gray-800">
+                                    {t('transfer_info')}
+                                </h3>
+                                <button 
+                                    onClick={() => setShowModal(false)}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <FontAwesomeIcon icon={faTimes} size="lg" />
+                                </button>
+                            </div>
 
-            <div className="p-6">
-                <div className="mb-4 border-b border-gray-100">
-                    <div className="inline-block border-b-2 border-blue-600 px-2 pb-1 text-blue-800 font-bold text-sm">
-                        Vietcombank
-                    </div>
-                </div>
+                            <div className="p-6">
+                                <div className="mb-4 border-b border-gray-100">
+                                    <div className="inline-block border-b-2 border-blue-600 px-2 pb-1 text-blue-800 font-bold text-sm">
+                                        Vietcombank
+                                    </div>
+                                </div>
 
-                <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-                    {/* QR Code Section */}
-                    <div className="w-full md:w-1/2 flex flex-col items-center">
-                        <div className="border-2 border-gray-100 rounded-xl bg-white shadow-sm p-2">
-                            <img 
-                                // Sử dụng encodeURIComponent cho addInfo để tránh lỗi ký tự đặc biệt trong URL
-                                src={`https://api.vietqr.io/image/vietcombank-970436-23121321232.jpg?amount=${String(selectItem.amount).replace(/\D/g,'')}&addInfo=${encodeURIComponent('TT ' + selectItem.id)}`}
-                                alt="QR Payment" 
-                                className="w-40 h-40 object-contain"
-                            />
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-2 italic">Quét mã để thanh toán nhanh</p>
-                    </div>
-
-                    {/* Info Section */}
-                    <div className="w-full md:w-1/2 space-y-3 text-[13px]">
-                        <InfoItem 
-                            label="Tên tài khoản" 
-                            value="CONG TY CO PHAN BAO HIEM PVI" 
-                        />
-                        <InfoItem 
-                            label="Số tài khoản" 
-                            value="0071001234567" 
-                        />
-                        <InfoItem 
-                            label="Ngân hàng" 
-                            value="Vietcombank - CN TP.HCM" 
-                        />
-                        <InfoItem 
-                            label="Số tiền" 
-                            // Thêm kiểm tra toLocaleString an toàn
-                            value={`${Number(String(selectItem.amount).replace(/\D/g,'')).toLocaleString('vi-VN')} đ`} 
-                            isRed
-                        />
-                        
-                        <div className="pt-2 border-t border-dashed border-gray-200">
-                            <label className="text-xs font-bold text-gray-700 block mb-1">{t('explan')}:</label>
-                            <div className="bg-gray-50 p-2 rounded border border-gray-100 break-all">
-                                <span className="text-red-600 font-bold">TT {selectItem.id}</span>
+                                <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                                    <div className="w-full md:w-1/2 flex flex-col items-center">
+                                        <div className="border-2 border-gray-100 rounded-xl bg-white shadow-sm p-2">
+                                            <img 
+                                                src={`https://api.vietqr.io/image/vietcombank-970436-23121321232.jpg?amount=${String(selectItem.amount).replace(/\D/g,'')}&addInfo=${encodeURIComponent('TT ' + selectItem.id)}`}
+                                                alt="QR Payment" 
+                                                className="w-40 h-40 object-contain"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-2 italic">{t('scan_qr')}</p>
+                                    </div>
+                                    <div className="w-full md:w-1/2 space-y-3 text-[13px]">
+                                        <InfoItem 
+                                            label="Tên tài khoản" 
+                                            value="CONG TY CO PHAN BAO HIEM PVI" 
+                                        />
+                                        <InfoItem 
+                                            label="Số tài khoản" 
+                                            value="0071001234567" 
+                                        />
+                                        <InfoItem 
+                                            label="Ngân hàng" 
+                                            value="Vietcombank - CN TP.HCM" 
+                                        />
+                                        <InfoItem 
+                                            label="Số tiền" 
+                                            value={formatVND(selectItem.amount)} 
+                                            isRed
+                                        />
+                                        
+                                        <div className="pt-2 border-t border-dashed border-gray-200">
+                                            <label className="text-xs font-bold text-gray-700 block mb-1">{t('explan')}:</label>
+                                            <div className="bg-gray-50 p-2 rounded border border-gray-100 break-all">
+                                                <span className="text-red-600 font-bold">TT {selectItem.id}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
-        </div>
-    </div>
-)}
-            </div>
-            
+            <Loading stateShow={isLoading} />
         </div>
     )
 }
