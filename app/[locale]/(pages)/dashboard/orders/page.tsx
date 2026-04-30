@@ -365,7 +365,7 @@ export default function Declarations() {
                                     {orders && orders.map((order: any, idx: number) => (
                                         <tr key={order.id} className="hover:bg-blue-50/30 transition-colors">
                                             <td className="px-4 py-3 text-[var(--global-main-color)] font-medium text-center">
-                                                <Link href={`/${locale}/dashboard/orders/${order.order_number}`}>
+                                                <Link href={`/${locale}/dashboard/orders/${order.id}`}>
                                                     {order.order_number}
                                                 </Link>
                                             </td>
