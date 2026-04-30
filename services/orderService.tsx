@@ -64,6 +64,12 @@ export const loadListOrderByBatchPaymentId = (data: any, token: string) => {
     return resp;
 }
 
+export const loadOrderById = (id: string, token: string) => {
+    const url = `dvc/order?id=${id}`;
+    const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
+}
+
 export const loadInfoFromSocialCode = (id: string, token: string) => {
     const url = 'bhxh/info/bhxhinfo';
 
