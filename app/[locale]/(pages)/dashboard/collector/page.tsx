@@ -120,7 +120,7 @@ export default function Collector() {
             const resp = await loadCollectors(data, accessToken);
             if (resp && resp.data) {
                 setCollectors(resp.data);
-                setTotalItems(resp.data.length);
+                setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
             console.log('Error get collectors: ', err);
