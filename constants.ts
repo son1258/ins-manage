@@ -39,13 +39,11 @@ export const PLANS = {
 
 export const PAYMENT_STATUS = {
     RECORDED: 0,
-    PAID: 1,
+    WAIT_PAID: 1,
+    PAID: 2,
+    TE: 3,
+    CANCEL: 4,
     PARTNER_PAID: 6
-}
-
-export const PAYMENT_REQUEST_STATUS = {
-    PAID: 0,
-    UNPAID: 1
 }
 
 export const GENDER = {

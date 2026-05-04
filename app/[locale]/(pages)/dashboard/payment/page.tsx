@@ -1,9 +1,9 @@
 "use client"
 
-import { faSearch, faSync, faEdit, faPrint, faTrash, faDownload, faFileAlt, faFileImport, faFileExport, faCalendarAlt, faPaperPlane, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faTrash, faFileAlt, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -13,15 +13,16 @@ import DateRangePicker from '@/components/DateRangePicker';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { PAYMENT_REQUEST_STATUS, PAYMENT_STATUS, SERVICE_CODE, STATUS } from '@/constants';
+import { PAYMENT_STATUS, SERVICE_CODE } from '@/constants';
 import { loadPayments, terminatePayment } from '@/services/paymentService';
 import { handleApiError } from '@/utils/errorHandler';
 import dayjs from 'dayjs';
 import InfoItem from '@/components/InfoItem';
 import { formatVND } from '@/utils/common';
-import { loadListOrderByBatchPaymentId, loadOrders } from '@/services/orderService';
+import { loadListOrderByBatchPaymentId } from '@/services/orderService';
 import { toast } from 'react-toastify';
 import Loading from '@/components/Loading';
+import Modal from '@/components/Modal';
 
 export default function Payment() {
     const t = useTranslations();
@@ -36,20 +37,22 @@ export default function Payment() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [payments, setPayments] = useState<any[]>([]);
+    const [totalItems, setTotalItems] = useState(0);
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [modalTerminate, setModalTerminate] = useState(false);
     const [selectItem, setSelectItem] = useState<any>();
     const [listOrders, setListOrders] = useState<any>();
     const [selectedOrder, setSelectedOrder] = useState<any>();
-    const [subPage, setSubPage] = useState(1);
-    const [subLimit, setSubLimit] = useState(5);
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
+    const [subTotalItems, setSubTotalItems] = useState(0);
+    const [batchPaymentId, setBatchPaymentId] = useState('');
 
     const status = [
-        {code: PAYMENT_REQUEST_STATUS.PAID, name: t('paid')},
-        {code: PAYMENT_REQUEST_STATUS.UNPAID, name: t('pending_payment')},
+        {code: PAYMENT_STATUS.PAID, name: t('paid')},
+        {code: PAYMENT_STATUS.RECORDED, name: t('pending_payment')},
     ]
 
     const declarations = [
@@ -114,17 +117,12 @@ export default function Payment() {
         router.push(`${pathname}?${params.toString()}`);
     }
 
-    const handleSubPageChange = (page: number) => {
-        setSubPage(page);
-        getListOrders(selectedOrder.listOrderIds);
+    const onTerminatePayment = (id: string) => {
+        setBatchPaymentId(id);
+        setModalTerminate(!modalTerminate);
     }
 
-    const handleSubLimitChange = (limit: number) => {
-        setSubLimit(limit);
-        getListOrders(selectedOrder.listOrderIds);
-    }
-
-    const handleTerminatePayment = async (batchPaymentId: string) => {
+    const handleTerminatePayment = async () => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
@@ -135,6 +133,7 @@ export default function Payment() {
             if (resp && resp.success) {
                 toast.success(t('success'));
                 handleRefresh();
+                setModalTerminate(false);
             }
         } catch(err: any) {
             console.log('Error terminate payment: ', err);
@@ -149,13 +148,14 @@ export default function Payment() {
         try {
             setIsLoading(true);
             const data = {
-                page: subPage,
-                limit: subLimit,
+                page: currentSubPage,
+                limit: subPageSize,
                 batchPaymentId: batchPaymentId
             }
             const resp = await loadListOrderByBatchPaymentId(data, accessToken);
             if (resp && resp.data) {
                 setListOrders(resp.data);
+                setSubTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
             console.log('Error get list orders: ', err);
@@ -165,13 +165,20 @@ export default function Payment() {
         }
     }
 
+    const filterDataPaytment = (data: any) => {
+        const result = data.filter((item: any) => item.status !== PAYMENT_STATUS.CANCEL);
+        return result;
+    }
+
     const getPayments = async(data: any) => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
             const resp = await loadPayments(data, accessToken);
             if (resp && resp.data) {
-                setPayments(resp.data);
+                const filterData = filterDataPaytment(resp.data);
+                setPayments(filterData);
+                setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
             console.log('Error get payments: ', err);
@@ -185,6 +192,12 @@ export default function Payment() {
         const find = declarations.find((item: any) => item.code == serviceCode);
         return find?.acronym.toUpperCase();
     }
+
+    useEffect(() => {
+        if (!selectedOrder) return;
+        setListOrders([]);
+        getListOrders(selectedOrder.id);
+    },[currentSubPage, subPageSize])
 
     useEffect(() => {
         if (!selectedOrder) return;
@@ -269,7 +282,7 @@ export default function Payment() {
                     </div>
                 </div>
             </form>
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white rounded-lg shadow overflow-x-auto mb-6">
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
@@ -289,11 +302,11 @@ export default function Payment() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded shadow overflow-hidden px-4">
+                    <div className="bg-white rounded shadow overflow-hidden px-4 pb-4">
                         <div className="overflow-x-auto">
                             <table className="w-full text-[13px] text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-[#1e3a5f] text-white whitespace-nowrap">
+                                    <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                         <th className="px-4 py-3 w-10"></th>
                                         <th className="px-4 py-3 border-r border-white/20 text-center">{t('payment_request_id')}</th>
                                         <th className="px-4 py-3 border-r border-white/20">{t('creator')}</th>
@@ -322,8 +335,8 @@ export default function Payment() {
                                                 <td className="px-4 py-3 text-gray-600">{payment.user.fullname}</td>
                                                 <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(payment.amount)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`${payment.status == PAYMENT_REQUEST_STATUS.UNPAID ? "bg-amber-400" : "bg-blue-500"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
-                                                        {payment.status == PAYMENT_REQUEST_STATUS.UNPAID ? t('pending_payment') : t('paid')}
+                                                    <span className={`${payment.status == PAYMENT_STATUS.PAID ? "bg-blue-500" : "bg-amber-400"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
+                                                        {payment.status == PAYMENT_STATUS.PAID ? t('paid') : t('pending_payment')}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.created_at).format("DD-MM-YYYY")}</td>
@@ -335,9 +348,9 @@ export default function Payment() {
                                                         className="hover:text-blue-600">
                                                         <FontAwesomeIcon icon={faQrcode} />
                                                     </button>
-                                                    {payment.status == PAYMENT_REQUEST_STATUS.UNPAID && 
+                                                    {payment.status != PAYMENT_STATUS.PAID && 
                                                         <button
-                                                            onClick={() => handleTerminatePayment(payment.id)} 
+                                                            onClick={() => onTerminatePayment(payment.id)} 
                                                             className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
                                                         </button>
                                                     }
@@ -380,15 +393,13 @@ export default function Payment() {
                                                     </tr>
                                                     <tr className="bg-orange-50/30">
                                                         <td colSpan={8} className="px-4 py-2 border-b border-orange-100">
-                                                            <div className="w-full"> 
-                                                                <Pagination
-                                                                    currentPage={currentSubPage}
-                                                                    totalItems={listOrders.length || 0}
-                                                                    pageSize={subPageSize}
-                                                                    onPageChange={(page) => handleSubPageChange(page)}
-                                                                    onPageSizeChange={(limit) => handleSubLimitChange(limit)}
-                                                                />
-                                                            </div>
+                                                            <Pagination
+                                                                currentPage={currentSubPage}
+                                                                totalItems={subTotalItems}
+                                                                pageSize={subPageSize}
+                                                                onPageChange={(page) => setCurrentSubPage(page)}
+                                                                onPageSizeChange={(limit) => setSubPageSize(limit)}
+                                                            />
                                                         </td>
                                                     </tr>
                                                 </>
@@ -398,13 +409,15 @@ export default function Payment() {
                                 </tbody>
                             </table>
                         </div>
-                        <Pagination
-                            currentPage={currentPage}
-                            totalItems={payments.length}
-                            pageSize={pageSize}
-                            onPageChange={(page) => handlePageChange(page)}
-                            onPageSizeChange={(limit) => handleLimitChange(limit)}
-                        />
+                        <div className="mt-2">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={totalItems}
+                                pageSize={pageSize}
+                                onPageChange={(page) => handlePageChange(page)}
+                                onPageSizeChange={(limit) => handleLimitChange(limit)}
+                            />
+                        </div>
                     </div>
                 </div>
                 {showModal && selectItem && (
@@ -472,6 +485,12 @@ export default function Payment() {
                     </div>
                 )}
             </div>
+            <Modal 
+                isOpen={modalTerminate} 
+                title={t('terminate_order')} 
+                onConfirm={handleTerminatePayment} 
+                onClose={() => setModalTerminate(false)} 
+            />
             <Loading stateShow={isLoading} />
         </div>
     )
