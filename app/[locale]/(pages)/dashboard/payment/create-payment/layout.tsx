@@ -5,12 +5,21 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux'; 
 import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
-import { createNewPayment } from '@/services/paymentService';
+import { confirmPayment, createNewPayment } from '@/services/paymentService';
 import { useRouter } from 'next/navigation';
+import Loading from '@/components/Loading';
+import { toast } from 'react-toastify';
+import { PAYMENT_STATUS } from '@/constants';
 
 export default function CreatePaymentLayout({ children }: { children: React.ReactNode }) {
     const t = useTranslations();
-    const { selectedIds, totalAmount } = useSelector((state: any) => state.payment);
+    const { 
+        selectedItems, 
+        totalAmount, 
+        excludedItems, 
+        isPaymentAllDate, 
+        batchPayments 
+    } = useSelector((state: any) => state.payment);
     const accessToken = Cookies.get('accessToken');
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -20,12 +29,22 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
         if (!totalAmount || !accessToken) return;
         try {
             setIsLoading(false);
-            const resp = await createNewPayment({order_id_list: selectedIds}, accessToken);
-            if (resp) {
+            let resp;
+            if (isPaymentAllDate) {
+                resp = await confirmPayment({batch_payment_id: batchPayments.id}, accessToken);
+            } else {
+                const data = {
+                    order_id_list: selectedItems,
+                    status: PAYMENT_STATUS.RECORDED 
+                }
+                resp = await createNewPayment(data, accessToken);
+            }
+            if (resp && resp.success) {
+                toast.success(t("success"));
                 router.push(`/${locale}/dashboard/payment`)
             }
         }catch(err: any) {
-            console.log('Error get medicals: ', err);
+            console.log('Error create payment: ', err);
             handleApiError(err, t);
         } finally {
             setIsLoading(false);
@@ -46,11 +65,11 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                         </h3>
                         <div className="flex items-center gap-2">
                             <span className="text-2xl font-bold text-[#1e3a5f]">
-                                {selectedIds?.length > 0 ? selectedIds.length : "--"}
+                                {selectedItems?.length > 0 ? selectedItems.length : "--"}
                             </span>
                             <span className="text-gray-500 text-sm">hồ sơ /</span>
                             <span className="text-2xl font-bold text-red-600">
-                                {selectedIds?.length > 0 ? totalAmount.toLocaleString('vi-VN') : "--"}
+                                {selectedItems?.length > 0 ? totalAmount.toLocaleString('vi-VN') : "--"}
                             </span>
                             <span className="text-[#1e3a5f] font-bold">đ</span>
                         </div>
@@ -58,9 +77,11 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
 
                     <button
                         onClick={createPayment}
-                        disabled={!selectedIds || selectedIds.length === 0}
+                        disabled={isPaymentAllDate ? 
+                            (excludedItems.length == 0 ? true : Object.keys(batchPayments).length === 0) : 
+                            (!selectedItems || selectedItems.length === 0)}
                         className={`px-8 py-3 rounded-md font-bold text-sm transition-all shadow-md
-                            ${selectedIds?.length > 0 
+                            ${(isPaymentAllDate ? (excludedItems.length == 0 ? true : batchPayments.id) : selectedItems?.length > 0)
                                 ? 'bg-[#1e3a5f] text-white hover:bg-[#152944] active:scale-95' 
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
@@ -69,6 +90,7 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                     </button>
                 </div>
             </div>
+            <Loading stateShow={isLoading} />
         </div>
     )
 }

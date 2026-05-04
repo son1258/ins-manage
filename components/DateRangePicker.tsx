@@ -67,6 +67,7 @@ export default function DateRangePicker({
                 <RangePicker
                     picker={picker}
                     value={value as any}
+                    allowClear={false}
                     onChange={handleRangeChange}
                     disabled={readOnly}
                     format="DD/MM/YYYY"

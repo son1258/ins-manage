@@ -1,26 +1,32 @@
-import { PaymentProps } from "@/types/paymentType";
+import { Item, PaymentProps } from "@/types/paymentType";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 const initialState: PaymentProps = {
-    selectedIds: [],
-    totalAmount: 0
+    batchPayments: {},
+    selectedItems:[],
+    excludedItems: [],
+    totalAmount: 0,
+    isPaymentAllDate: false
 }
 
 const paymentSlice = createSlice({
     name: "payment",
     initialState,
     reducers: {
-        setSelectedIds: (state, action: PayloadAction<string[]>) => {
-            state.selectedIds = action.payload
+        setBatchPayments: (state, action: PayloadAction<any>) => {
+            state.batchPayments = action.payload;
         },
 
-        toggleSelectedId: (state, action: PayloadAction<string>) => {
-            const id = action.payload;
-            if (state.selectedIds.includes(id)) {
-                state.selectedIds = state.selectedIds.filter(item => item !== id);
-            } else {
-                state.selectedIds.push(id);
-            }
+        setIsPaymentDate: (state, action: PayloadAction<boolean>) => {
+            state.isPaymentAllDate = action.payload;
+        },
+
+        setSelectedItems: (state, action: PayloadAction<Item[]>) => {
+            state.selectedItems = action.payload;
+        },
+
+        setExcludedItems: (state, action: PayloadAction<Item[]>) => {
+            state.excludedItems = action.payload;
         },
 
         setTotalAmount: (state, action: PayloadAction<number>) => {
@@ -28,11 +34,18 @@ const paymentSlice = createSlice({
         },
 
         resetPayment: (state) => {
-            state.selectedIds = [];
+            state.selectedItems = [];
             state.totalAmount = 0;
         }
     }
 })
 
-export const {setSelectedIds, toggleSelectedId, setTotalAmount, resetPayment} = paymentSlice.actions;
+export const {
+    setBatchPayments,
+    setIsPaymentDate,
+    setSelectedItems, 
+    setExcludedItems, 
+    setTotalAmount, 
+    resetPayment
+} = paymentSlice.actions;
 export default paymentSlice.reducer;

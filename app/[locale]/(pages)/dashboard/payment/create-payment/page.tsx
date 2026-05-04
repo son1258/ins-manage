@@ -2,15 +2,15 @@
 
 import { faSearch, faSync } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { useDispatch } from 'react-redux';
-import { setSelectedIds, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { setBatchPayments, setExcludedItems, setIsPaymentDate, setSelectedItems, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
-import { PLANS, SERVICE_CODE } from '@/constants';
+import { PAYMENT_STATUS, PLANS, SERVICE_CODE } from '@/constants';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DateRangePicker from '@/components/DateRangePicker';
 import { handleApiError } from '@/utils/errorHandler';
@@ -19,10 +19,12 @@ import { loadOrders } from '@/services/orderService';
 import dayjs from 'dayjs';
 import { formatVND } from '@/utils/common';
 import Loading from '@/components/Loading';
+import { createPaymentWithFilter, updatePaymentWithFilter } from '@/services/paymentService';
 
 export default function CreatePaymentRequest() {
     const t = useTranslations();
     const router = useRouter();
+    const locale = useLocale();
     const pathname = usePathname();
     const dispatch = useDispatch();
     const accessToken = Cookies.get('accessToken');
@@ -30,31 +32,38 @@ export default function CreatePaymentRequest() {
     const searchParams = useSearchParams();
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [listDeclarationCode, setListDeclarationCode] = useState<string[]>([]);
-    const [selectedDeclaration, setSelectedDeclaration] = useState();
     const [isLoading, setIsLoading] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
     const [plans, setPlans] = useState<any[]>([]);
     const [orders, setOrders] = useState<any[]>([]);
- 
-    const declarations = [
-        {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
-        {code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd"},
-    ]
+    const [excludedIds, setExcludedIds] = useState<any[]>([]);
+    const dataSelectedIds = useSelector((state: any) => state.payment.selectedItems);
+    const [isCheckAllPayments, setIsCheckAllPayments] = useState(false);
+    const [amountMap, setAmountMap] = useState<any>({});
+    const [tempPaymentFilter, setTempPaymentFilter] = useState({
+        batchPaymentId: "",
+        fromDate: "",
+        toDate: "",
+        excludedIds: [],
+    })
     
     const [formData, setFormData] = useState<any>({
-        serviceCode: "",
+        serviceCode: null,
         medicalCode: "",
         customerName: "",
         status: "",
         plan: "",
-        fromDate: "",
-        toDate: ""
+        fromDate: today,
+        toDate: today
     });
+
+    const declarations = [
+        {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
+        {code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd"},
+    ]
 
     const handleValueChange = (nameField: string, value: any) => {
         if (nameField == 'serviceCode') {
-            setSelectedDeclaration(value);
             if (value == SERVICE_CODE.BHXH) {
                 setPlans([
                     {code: PLANS.NEXT_PAYMENT, name: t('next_payment')},
@@ -79,14 +88,13 @@ export default function CreatePaymentRequest() {
 
     const handleRefresh = () => {
         router.push(pathname);
+        setIsCheckAllPayments(false);
+        dispatch(setSelectedItems([]));
     }
-
-    const indexOfLastItem = currentPage * pageSize;
-    const indexOfFirstItem = indexOfLastItem - pageSize;
-    const currentTableData = orders.slice(indexOfFirstItem, indexOfLastItem);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+        setIsCheckAllPayments(false);
         const params = new URLSearchParams();
         params.set('limit', String(formData.limit));
         params.set('page', '1');
@@ -107,18 +115,57 @@ export default function CreatePaymentRequest() {
     }
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.checked) {
-            const allIdsOnPage = currentTableData.map(item => item.id);
-            setListDeclarationCode(allIdsOnPage);
+        const currentIds = orders.map(item => item.id);
+        if (isCheckAllPayments) {
+            let newExcludedIds = [...excludedIds];
+            if (e.target.checked) {
+                newExcludedIds = newExcludedIds.filter(id => !currentIds.includes(id));
+            } else {
+                currentIds.forEach(id => {
+                    if (!newExcludedIds.includes(id)) newExcludedIds.push(id);
+                });
+            }
+            setExcludedIds(newExcludedIds);
+            dispatch(setExcludedItems(newExcludedIds));
         } else {
-            setListDeclarationCode([]);
+            let newSelectedIds = [...dataSelectedIds];
+            if (e.target.checked) {
+                currentIds.forEach(id => {
+                    if (!newSelectedIds.includes(id)) newSelectedIds.push(id);
+                })
+            } else {
+                newSelectedIds = newSelectedIds.filter(id => !currentIds.includes(id));
+            }
+            dispatch(setSelectedItems(newSelectedIds));
+            calculateTotalAmount(newSelectedIds);
         }
     }
 
     const handleSelectRow = (id: any) => {
-        setListDeclarationCode(prev => 
-            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
+        if (isCheckAllPayments) {
+            let newExcludedIds = [...excludedIds];
+            if (newExcludedIds.includes(id)) {
+                newExcludedIds = newExcludedIds.filter(item => item !== id);
+            } else {
+                newExcludedIds.push(id);
+            }
+            setExcludedIds(newExcludedIds);
+            dispatch(setExcludedItems(newExcludedIds));
+        } else {
+            let newSelectedIds = [...dataSelectedIds];
+            if (newSelectedIds.includes(id)) {
+                newSelectedIds = newSelectedIds.filter(item => item !== id);
+            } else {
+                newSelectedIds.push(id);
+            }
+            dispatch(setSelectedItems(newSelectedIds));
+            calculateTotalAmount(newSelectedIds);
+        }
+    }
+
+    const filterOrders = (listOrders: any) => {
+        const values = listOrders.filter((item: any) => item.status == PAYMENT_STATUS.RECORDED);
+        return values;
     }
 
     const getOrders = async (data: any) => {
@@ -127,7 +174,8 @@ export default function CreatePaymentRequest() {
             setIsLoading(true);
             const resp = await loadOrders(data, accessToken);
             if (resp && resp.success) {
-                setOrders(resp.data);
+                const newOrders = filterOrders(resp.data);
+                setOrders(newOrders);
                 setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
@@ -157,8 +205,79 @@ export default function CreatePaymentRequest() {
         return find?.acronym.toUpperCase();
     }
 
+    const handleDataPaymentWithDate = (data: any) => {
+        dispatch(setTotalAmount(data.batch_payment.amount));
+        dispatch(setSelectedItems(data.batch_payment.list_orders));
+    }
+
+    const createTempPaymentWithDate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const isChecking = e.target.checked;
+        setIsCheckAllPayments(isChecking);
+        dispatch(setIsPaymentDate(isChecking));
+        if (isChecking) {
+            if (!accessToken) return;
+            try {
+                setIsLoading(true);
+                const data = {
+                    "from_date": formData.fromDate,
+                    "to_date": formData.toDate,
+                    "list_excluded_orders": []
+                }
+                const resp = await createPaymentWithFilter(data, accessToken);
+                if (resp && resp.success) {
+                    handleDataPaymentWithDate(resp.data[0]);
+                    setTempPaymentFilter(prev => ({
+                        ...prev,
+                        batchPaymentId: resp.data[0].batch_payment.id,
+                        fromDate: formData.fromDate,
+                        toDate: formData.toDate,
+                    }));
+                } 
+            } catch(err: any) {
+                console.log('Error create payment with date: ', err);
+                handleApiError(err, t);
+                setIsCheckAllPayments(false);
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            dispatch(setSelectedItems([]));
+            dispatch(setTotalAmount(0));
+        }
+    }
+
+    const updatePaymentWithDate = async () => {
+        if (!accessToken) return;
+        try {
+            setIsLoading(true);
+            const data = {
+                "batch_payment_id": tempPaymentFilter.batchPaymentId,
+                "from_date": tempPaymentFilter.fromDate,
+                "to_date": tempPaymentFilter.toDate,
+                "list_excluded_orders": excludedIds
+            }
+            const resp = await updatePaymentWithFilter(data, accessToken);
+            if (resp && resp.success) {
+                dispatch(setBatchPayments(resp.data[0].batch_payment));
+                handleDataPaymentWithDate(resp.data[0]);
+            }
+        } catch(err: any) {
+            console.log('Error update payment: ', err);
+            handleApiError(err, t);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    const calculateTotalAmount = (currentSelectedIds: string[]) => {
+        const total = currentSelectedIds.reduce((sum, id) => {
+            return sum + (amountMap[id] || 0);
+        }, 0);
+        dispatch(setTotalAmount(total));
+    };
+
     useEffect(() => {
-        dispatch(setActiveTitle(t('list_declaration')));
+        dispatch(setActiveTitle(t("create_payment_request")));
         const serviceCode = Number(searchParams.get('service_code'));
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
@@ -172,7 +291,7 @@ export default function CreatePaymentRequest() {
         const dataFromUrl = {
             limit: limitParams || 10,
             page: pageParams || 1,
-            serviceCode: serviceCode || "",
+            serviceCode: serviceCode,
             medicalCode: medicalCodeParams || "",
             customerName: customerNameParams || "",
             status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : "",
@@ -184,7 +303,7 @@ export default function CreatePaymentRequest() {
             fromMonth: "",
             toMonth: ""
         }
-   
+
         setFormData(dataFromUrl);
         setCurrentPage(dataFromUrl.page);
         setPageSize(dataFromUrl.limit);
@@ -192,31 +311,32 @@ export default function CreatePaymentRequest() {
     },[searchParams]) 
 
     useEffect(() => {
-        dispatch(setActiveTitle(t("create_payment_request")));
-    }, []);
+        if (orders.length > 0) {
+            setAmountMap((prev:any) => {
+                const newMap = { ...prev };
+                orders.forEach(item => {
+                    let num = 0;
+                    if (typeof item.amount === 'string') {
+                        num = parseInt(item.amount.replace(/\./g, '')) || 0;
+                    } else {
+                        num = item.amount || 0;
+                    }
+                    newMap[item.id] = num;
+                });
+                return newMap;
+            });
+        }
+    }, [orders]);
 
     useEffect(() => {
-        dispatch(setSelectedIds(listDeclarationCode));
-
-        const total = orders
-            .filter(item => listDeclarationCode.includes(item.id))
-            .reduce((sum, item) => {
-                const rawAmount = item.service_code == SERVICE_CODE.BHXH 
-                    ? item.data.d05_ts.noi_dung[0].tongtien
-                    : item.data.d03_ts.noi_dung[0].tien_dong;
-
-                let num = 0;
-                if (typeof rawAmount === 'string') {
-                    num = parseInt(rawAmount.replace(/\./g, '')) || 0;
-                } else if (typeof rawAmount === 'number') {
-                    num = rawAmount;
-                }
-
-                return sum + num;
-            }, 0);
-
-        dispatch(setTotalAmount(total));
-    }, [listDeclarationCode, orders, dispatch]);
+        dispatch(setSelectedItems([]));
+        dispatch(setExcludedItems([]));
+        dispatch(setTotalAmount(0));
+        dispatch(setBatchPayments({}));
+        dispatch(setIsPaymentDate(false));
+        setExcludedIds([]);
+        setIsCheckAllPayments(false);
+    }, []);
 
     return (
         <div className="flex flex-col gap-3 text-black">
@@ -281,7 +401,7 @@ export default function CreatePaymentRequest() {
                         <button
                             type="button"
                             onClick={handleRefresh} 
-                            className="flex items-center text-gray-500 text-xs hover:text-[#f37021] transition-colors font-medium cursor-pointer">
+                            className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                             <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                             {t('refresh')}
                         </button>
@@ -301,20 +421,43 @@ export default function CreatePaymentRequest() {
                             <h1 className="font-bold text-gray-800 text-sm">{t('record_list')}</h1>
                             <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
                         </div>
+                        <div className="flex items-center justify-between gap-4">
+                            <label className="flex items-center cursor-pointer font-bold">
+                                <input 
+                                    type="checkbox"
+                                    checked={isCheckAllPayments} 
+                                    className="form-checkbox h-4 w-4 mr-2 cursor-pointer accent-[#1e3a5f]" 
+                                    onChange={createTempPaymentWithDate}
+                                />
+                                <span>{t('all')}</span>
+                            </label>
+                        
+                            <button
+                                onClick={updatePaymentWithDate}
+                                disabled={!isCheckAllPayments && !excludedIds}
+                                className={`text-white px-2 py-1 rounded text-sm font-semibold cursor-pointer 
+                                    ${excludedIds.length > 0 ? 'bg-[#1e3a5f] hover:bg-[#152944]' : 'bg-gray-300'}`}
+                            >{t('update')}
+                            </button>            
+                        </div>
                     </div>
 
                     <div className="bg-white rounded shadow overflow-hidden px-4">
                         <div className="overflow-x-auto">
                             <table className="w-full text-[13px] text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-[#1e3a5f] text-white whitespace-nowrap">
+                                    <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                         <th className="flex items-center gap-2 px-4 py-3 font-semibold border-r border-white">
-                                            <input 
-                                                type="checkbox" 
-                                                onChange={handleSelectAll}
-                                                checked={currentTableData.length > 0 && listDeclarationCode.length === currentTableData.length}
-                                                className="w-4 h-4 cursor-pointer"
-                                            />
+                                            {orders && orders.length > 0 && (
+                                                <input 
+                                                    type="checkbox" 
+                                                    onChange={handleSelectAll}
+                                                    checked={isCheckAllPayments 
+                                                        ? orders.every(item => !excludedIds.includes(item.id))
+                                                        : (orders.length > 0 && orders.every(item => dataSelectedIds.includes(item.id)))}
+                                                    className="w-4 h-4 cursor-pointer"
+                                                />
+                                            )}
                                             {t('declaration_code')}
                                         </th>
                                         <th className="px-4 py-3 font-semibold border-r border-white">{t('application_type')}</th>
@@ -328,7 +471,9 @@ export default function CreatePaymentRequest() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {orders.map((order, idx) => {
-                                        const isSelected = listDeclarationCode.includes(order.id);
+                                        const isSelected = isCheckAllPayments ? 
+                                            !excludedIds.includes(order.id)
+                                            : dataSelectedIds?.includes(order.id);
                                         return (
                                             <tr 
                                                 key={order.id} 
@@ -341,20 +486,20 @@ export default function CreatePaymentRequest() {
                                                         onChange={() => handleSelectRow(order.id)}
                                                         className="w-4 h-4 cursor-pointer"
                                                     />
-                                                    {order.id}
+                                                    {order.order_number}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-600">{getServiceNameFromCode(order.service_code)}</td>
-                                                <td className="px-4 py-3 text-gray-600">{order.user?.username}</td>
+                                                <td className="px-4 py-3 text-gray-600">{order.collector?.name}</td>
                                                 <td className="px-4 py-3 font-medium text-gray-700">{order.ld_name}</td>
                                                 <td className="px-4 py-3 text-gray-600">
-                                                    {order.service_code == SERVICE_CODE.BHXH ? order.data?.d05_ts?.noi_dung[0]?.maso_bhxh : order.data?.d03_ts?.noi_dung[0]?.maso_bhxh}
+                                                    {order.ld_maso_bhxh}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-600">
-                                                    {order.service_code == SERVICE_CODE.BHXH ? order.data?.d05_ts?.noi_dung[0]?.pa : order.data?.d03_ts?.noi_dung[0]?.pa}
+                                                    {order.ld_pa == PLANS.NEW ? t("new") : t("renewal")}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-right text-teal-600 font-bold">
-                                                    {order.service_code == SERVICE_CODE.BHXH ? formatVND(order.data?.d05_ts?.noi_dung[0]?.tongtien) : formatVND(order.data?.d03_ts?.noi_dung[0]?.tien_dong)}
+                                                    {formatVND(order.amount)}
                                                 </td>
                                             </tr>
                                         )
