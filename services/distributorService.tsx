@@ -9,7 +9,7 @@ export const loadDistributors = (params: any, token: string) => {
     if (params.page) {
         queryParams.push(`page=${params.page}`)
     }
-    if (params.status) {
+    if (params.status != "" || params.status != null) {
         queryParams.push(`status=${params.status}`)
     }
     if (params.providerCode) {

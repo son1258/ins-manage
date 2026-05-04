@@ -9,7 +9,7 @@ export const loadCollectors = (params: any, token: string) => {
     if (params.page) {
         queryParams.push(`page=${params.page}`);
     }
-    if (params.status != "" && params.status != null) {
+    if (params.status != "" || params.status != null) {
         queryParams.push(`status=${params.status}`);
     }
     if (params.collectorCode) {
