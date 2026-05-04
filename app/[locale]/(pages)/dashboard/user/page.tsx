@@ -77,6 +77,20 @@ export default function User() {
         router.push(pathname);
     }
 
+    const handlePageChange = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', String(page));
+        handleValueChange('page', page);
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const handleLimitChange = (limit: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('limit', String(limit));
+        params.set('page', '1');
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
     const getUsers = async (data: any) => {
         if (!accessToken) return;
         try {
@@ -84,7 +98,7 @@ export default function User() {
             const resp = await loadListUsers(data, accessToken);
             if (resp && resp.data) {
                 setUsers(resp.data);
-                setTotalItems(resp.data.length);
+                setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
             console.log('Error get distributors: ', err);
@@ -250,11 +264,8 @@ export default function User() {
                         currentPage={currentPage}
                         totalItems={totalItems}
                         pageSize={pageSize}
-                        onPageChange={(page) => setCurrentPage(page)}
-                        onPageSizeChange={(size) => {
-                            setPageSize(size);
-                            setCurrentPage(1);
-                        }}
+                        onPageChange={(page) => handlePageChange(page)}
+                        onPageSizeChange={(limit) => handleLimitChange(limit)}
                     />
                 </div>
             </div>
