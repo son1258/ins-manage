@@ -2,7 +2,7 @@
 
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useDispatch } from "react-redux";
 import Cookies from 'js-cookie';
 import { handleApiError } from "@/utils/errorHandler";
@@ -19,8 +19,7 @@ export default function EditDistributor() {
     const params: any = useParams();
     const router = useRouter();
     const accessToken = Cookies.get('accessToken');
-    const [distributor, setDistributor] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [formData, setFormData] = useState({
         distributorId: "",
         distributorCode: "",
@@ -48,46 +47,42 @@ export default function EditDistributor() {
         e.preventDefault();
         const hasError = Object.values(errors).some(value => value === true);
         if (!accessToken || hasError) return;
-        try {
-            setIsLoading(true);
-            const data = {
-                id: formData.distributorId,
-                code: formData.distributorCode,
-                name: formData.distributorName
+        startTransition(async () => {
+            try {
+                const data = {
+                    id: formData.distributorId,
+                    code: formData.distributorCode,
+                    name: formData.distributorName
+                }
+                const resp = await updateDistributor(data, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t('success'))
+                    router.push(`/${locale}/dashboard/distributor`);
+                }
+            } catch(err: any) {
+                console.log('Error update distributor: ', err);
+                handleApiError(err, t);
             }
-            const resp = await updateDistributor(data, accessToken);
-            if (resp && resp.success) {
-                setDistributor(resp.data);
-                toast.success(t('success'))
-                router.push(`/${locale}/dashboard/distributor`);
-            }
-        } catch(err: any) {
-            console.log('Error update distributor: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getDistributorById = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadDistributorById(params.id, accessToken);
-            if (resp && resp.data) {
-                const data = {
-                    distributorId: resp.data.id,
-                    distributorCode: resp.data.code,
-                    distributorName: resp.data.name
+        startTransition(async () => {
+            try {
+                const resp = await loadDistributorById(params.id, accessToken);
+                if (resp && resp.data) {
+                    const data = {
+                        distributorId: resp.data.id,
+                        distributorCode: resp.data.code,
+                        distributorName: resp.data.name
+                    }
+                    setFormData(data);
                 }
-                setFormData(data);
-            }
-        } catch(err: any) {
-            console.log('Error get distributor: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+            } catch(err: any) {
+                handleApiError(err, t);
+            } 
+        })
     }
 
     useEffect(() => {

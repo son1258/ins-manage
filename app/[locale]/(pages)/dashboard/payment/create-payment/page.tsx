@@ -3,7 +3,7 @@
 import { faSearch, faSync } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -32,7 +32,7 @@ export default function CreatePaymentRequest() {
     const searchParams = useSearchParams();
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [totalItems, setTotalItems] = useState(0);
     const [plans, setPlans] = useState<any[]>([]);
     const [orders, setOrders] = useState<any[]>([]);
@@ -165,19 +165,17 @@ export default function CreatePaymentRequest() {
 
     const getOrders = async (data: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadOrders(data, accessToken);
-            if (resp && resp.success) {
-                setOrders(resp.data);
-                setTotalItems(resp.paginate.total);
+        startTransition(async () => {
+            try {
+                const resp = await loadOrders(data, accessToken);
+                if (resp && resp.success) {
+                    setOrders(resp.data);
+                    setTotalItems(resp.paginate.total);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get orders: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const handlePageChange = (page: number) => {
@@ -210,30 +208,28 @@ export default function CreatePaymentRequest() {
         dispatch(setIsPaymentDate(isChecking));
         if (isChecking) {
             if (!accessToken) return;
-            try {
-                setIsLoading(true);
-                const data = {
-                    "from_date": formData.fromDate,
-                    "to_date": formData.toDate,
-                    "list_excluded_orders": []
+            startTransition(async () => {
+                try {
+                    const data = {
+                        "from_date": formData.fromDate,
+                        "to_date": formData.toDate,
+                        "list_excluded_orders": []
+                    }
+                    const resp = await createPaymentWithFilter(data, accessToken);
+                    if (resp && resp.success) {
+                        handleDataPaymentWithDate(resp.data[0]);
+                        setTempPaymentFilter(prev => ({
+                            ...prev,
+                            batchPaymentId: resp.data[0].batch_payment.id,
+                            fromDate: formData.fromDate,
+                            toDate: formData.toDate,
+                        }));
+                    } 
+                } catch(err: any) {
+                    handleApiError(err, t);
+                    setIsCheckAllPayments(false);
                 }
-                const resp = await createPaymentWithFilter(data, accessToken);
-                if (resp && resp.success) {
-                    handleDataPaymentWithDate(resp.data[0]);
-                    setTempPaymentFilter(prev => ({
-                        ...prev,
-                        batchPaymentId: resp.data[0].batch_payment.id,
-                        fromDate: formData.fromDate,
-                        toDate: formData.toDate,
-                    }));
-                } 
-            } catch(err: any) {
-                console.log('Error create payment with date: ', err);
-                handleApiError(err, t);
-                setIsCheckAllPayments(false);
-            } finally {
-                setIsLoading(false);
-            }
+            })
         } else {
             dispatch(setSelectedItems([]));
             dispatch(setTotalAmount(0));
@@ -242,25 +238,23 @@ export default function CreatePaymentRequest() {
 
     const updatePaymentWithDate = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const data = {
-                "batch_payment_id": tempPaymentFilter.batchPaymentId,
-                "from_date": tempPaymentFilter.fromDate,
-                "to_date": tempPaymentFilter.toDate,
-                "list_excluded_orders": excludedIds
+        startTransition(async () => {
+            try {
+                const data = {
+                    "batch_payment_id": tempPaymentFilter.batchPaymentId,
+                    "from_date": tempPaymentFilter.fromDate,
+                    "to_date": tempPaymentFilter.toDate,
+                    "list_excluded_orders": excludedIds
+                }
+                const resp = await updatePaymentWithFilter(data, accessToken);
+                if (resp && resp.success) {
+                    dispatch(setBatchPayments(resp.data[0].batch_payment));
+                    handleDataPaymentWithDate(resp.data[0]);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-            const resp = await updatePaymentWithFilter(data, accessToken);
-            if (resp && resp.success) {
-                dispatch(setBatchPayments(resp.data[0].batch_payment));
-                handleDataPaymentWithDate(resp.data[0]);
-            }
-        } catch(err: any) {
-            console.log('Error update payment: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const calculateTotalAmount = (currentSelectedIds: string[]) => {

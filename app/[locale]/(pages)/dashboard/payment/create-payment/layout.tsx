@@ -1,7 +1,7 @@
 "use client"
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useSelector } from 'react-redux'; 
 import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
@@ -21,34 +21,32 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
         batchPayments 
     } = useSelector((state: any) => state.payment);
     const accessToken = Cookies.get('accessToken');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const router = useRouter();
     const locale = useLocale();
 
     const createPayment = async () => {
         if (!totalAmount || !accessToken) return;
-        try {
-            setIsLoading(false);
-            let resp;
-            if (isPaymentAllDate) {
-                resp = await confirmPayment({batch_payment_id: batchPayments.id}, accessToken);
-            } else {
-                const data = {
-                    order_id_list: selectedItems,
-                    status: PAYMENT_STATUS.RECORDED 
+        startTransition(async () => {
+            try {
+                let resp;
+                if (isPaymentAllDate) {
+                    resp = await confirmPayment({batch_payment_id: batchPayments.id}, accessToken);
+                } else {
+                    const data = {
+                        order_id_list: selectedItems,
+                        status: PAYMENT_STATUS.RECORDED 
+                    }
+                    resp = await createNewPayment(data, accessToken);
                 }
-                resp = await createNewPayment(data, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t("success"));
+                    router.push(`/${locale}/dashboard/payment`)
+                }
+            }catch(err: any) {
+                handleApiError(err, t);
             }
-            if (resp && resp.success) {
-                toast.success(t("success"));
-                router.push(`/${locale}/dashboard/payment`)
-            }
-        }catch(err: any) {
-            console.log('Error create payment: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     return (
