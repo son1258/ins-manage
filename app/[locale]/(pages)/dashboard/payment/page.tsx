@@ -284,7 +284,7 @@ export default function Payment() {
                             <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{payments.length}</span>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 mt-2 md:mt-0">
                             <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 transition-colors">
                                 <FontAwesomeIcon icon={faFileAlt} />{t('download_file')}
                             </button>
@@ -338,20 +338,20 @@ export default function Payment() {
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
                                                     {payment.status !== PAYMENT_STATUS.CANCEL && (
-                                                        <>
-                                                        <button 
-                                                            onClick={() => handleShowOr(payment)}
+                                                        <div className='flex items-center justify-center w-full gap-2'>
+                                                            <button 
+                                                                onClick={() => handleShowOr(payment)}
 
-                                                            className="hover:text-blue-600">
-                                                            <FontAwesomeIcon icon={faQrcode} />
-                                                        </button>
-                                                        {payment.status != PAYMENT_STATUS.PAID && 
-                                                            <button
-                                                                onClick={() => onTerminatePayment(payment.id)} 
-                                                                className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
+                                                                className="hover:text-blue-600">
+                                                                <FontAwesomeIcon icon={faQrcode} />
                                                             </button>
-                                                        }
-                                                        </>
+                                                            {payment.status != PAYMENT_STATUS.PAID && 
+                                                                <button
+                                                                    onClick={() => onTerminatePayment(payment.id)} 
+                                                                    className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
+                                                                </button>
+                                                            }
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
