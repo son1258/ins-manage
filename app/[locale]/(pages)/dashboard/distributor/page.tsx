@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
@@ -29,7 +29,7 @@ export default function DistributorManagement() {
     const accessToken = Cookies.get('accessToken');
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [pageSize, setPageSize] = useState(10);
     const [providers, setProviders] = useState<any[]>([]);
     const [distributors, setDistributors] = useState<any[]>([]);
@@ -85,35 +85,31 @@ export default function DistributorManagement() {
 
     const getProviders = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadProviders(accessToken);
-            if (resp && resp.data) {
-                setProviders(resp.data);
+        startTransition(async () => {
+            try {
+                const resp = await loadProviders(accessToken);
+                if (resp && resp.data) {
+                    setProviders(resp.data);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get providers: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getDistributors = async (data: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadDistributors(data, accessToken);
-            if (resp && resp.data) {
-                setDistributors(resp.data);
-                setTotalItems(resp.paginate.total);
+        startTransition(async () => {
+            try {
+                const resp = await loadDistributors(data, accessToken);
+                if (resp && resp.data) {
+                    setDistributors(resp.data);
+                    setTotalItems(resp.paginate.total);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get distributors: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const handlePageChange = (page: number) => {
@@ -132,21 +128,19 @@ export default function DistributorManagement() {
 
     const updateStateDistributor = async () => {
         if (!accessToken || !selectedId) return;
-        try {
-            setIsLoading(true);
-            const resp = await disableDistributor(selectedId, accessToken);
-            if (resp && resp.success) {
-                setOpenModal(false);
-                toast.success(t('success'));
-                setSelectedId('');
-                await getDistributors(formData);
+        startTransition(async () => {
+            try {
+                const resp = await disableDistributor(selectedId, accessToken);
+                if (resp && resp.success) {
+                    setOpenModal(false);
+                    toast.success(t('success'));
+                    setSelectedId('');
+                    await getDistributors(formData);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error disable distributor: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const handleSelectDisableDistributor = (id: string) => {

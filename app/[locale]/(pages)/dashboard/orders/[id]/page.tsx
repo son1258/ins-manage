@@ -3,7 +3,7 @@
 import FormSection from "@/components/FormSection";
 import InputGroup from "@/components/InputGroup";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Cookies from "js-cookie";
 import { useParams } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -27,7 +27,7 @@ export default function OrderDetail() {
 	const t = useTranslations();
 	const params: any = useParams();
 	const dispatch = useDispatch();
-	const [isLoading, setIsLoading] = useState(false);
+	const [isLoading, startTransition] = useTransition();
 	const accessToken = Cookies.get("accessToken");
 	const [isBHXH, setIsBHXH] = useState(false);
 	const [provinces, setProvinces] = useState<any>(null);
@@ -47,52 +47,46 @@ export default function OrderDetail() {
 
 	const getOrderDetail = async (orderId: string) => {
 		if (!accessToken) return;
-		try {
-			setIsLoading(true);
-			const resp = await loadOrderById(orderId, accessToken);
-			if (resp && resp.success) {
-				setOrder(resp.data);
-				setIsBHXH(resp.data.service_code == SERVICE_CODE.BHXH);
-				setFamily(resp.data.data.tk1_ts.noi_dung[0].ho_gia_dinh.thanh_vien);
+		startTransition(async() => {
+			try {
+				const resp = await loadOrderById(orderId, accessToken);
+				if (resp && resp.success) {
+					setOrder(resp.data);
+					setIsBHXH(resp.data.service_code == SERVICE_CODE.BHXH);
+					setFamily(resp.data.data.tk1_ts.noi_dung[0].ho_gia_dinh.thanh_vien);
+				}
+			} catch (err: any) {
+				handleApiError(err, t);
 			}
-		} catch (err: any) {
-			console.log("Error get order: ", err);
-			handleApiError(err, t);
-		} finally {
-			setIsLoading(false);
-		}
+		})
 	};
 
 	const getProvinces = async () => {
 		if (!accessToken) return;
-		try {
-			setIsLoading(true);
-			const resp = await loadProvinces(accessToken);
-			if (resp && resp.success) {
-				setProvinces(resp.data);
+		startTransition(async () => {
+			try {
+				const resp = await loadProvinces(accessToken);
+				if (resp && resp.success) {
+					setProvinces(resp.data);
+				}
+			} catch (err: any) {
+				handleApiError(err, t);
 			}
-		} catch (err: any) {
-			console.log("Error get provinces: ", err);
-			handleApiError(err, t);
-		} finally {
-			setIsLoading(false);
-		}
+		})
 	};
 
 	const getEthinicities = async () => {
 		if (!accessToken) return;
-		try {
-			setIsLoading(true);
-			const resp = await loadEthinicities(accessToken);
-			if (resp && resp.success) {
-				setEthinicities(resp.data);
+		startTransition(async() => {
+			try {
+				const resp = await loadEthinicities(accessToken);
+				if (resp && resp.success) {
+					setEthinicities(resp.data);
+				}
+			} catch (err: any) {
+				handleApiError(err, t);
 			}
-		} catch (err: any) {
-			console.log("Error get ethinicities: ", err);
-			handleApiError(err, t);
-		} finally {
-			setIsLoading(false);
-		}
+		})
 	};
 
 	const calculateMonth = (date: any, range: number) => {
