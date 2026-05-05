@@ -165,19 +165,13 @@ export default function Payment() {
         }
     }
 
-    const filterDataPaytment = (data: any) => {
-        const result = data.filter((item: any) => item.status !== PAYMENT_STATUS.CANCEL);
-        return result;
-    }
-
     const getPayments = async(data: any) => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
             const resp = await loadPayments(data, accessToken);
             if (resp && resp.data) {
-                const filterData = filterDataPaytment(resp.data);
-                setPayments(filterData);
+                setPayments(resp.data);
                 setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
@@ -324,19 +318,21 @@ export default function Payment() {
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
                                                 onClick={() => toggleRow(payment.id)}
                                             >
-                                                <td className="px-4 py-3 text-center">
-                                                    <FontAwesomeIcon 
-                                                        onClick={() => setSelectedOrder(payment)}
-                                                        icon={expandedRow === payment.id ? faChevronDown : faChevronRight} 
-                                                        className="text-gray-400 text-xs"
-                                                    />
+                                                <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
+                                                    {payment.status !== PAYMENT_STATUS.CANCEL ? (
+                                                        <FontAwesomeIcon 
+                                                            onClick={() => setSelectedOrder(payment)}
+                                                            icon={expandedRow === payment.id ? faChevronDown : faChevronRight} 
+                                                            className="text-gray-400 text-xs"
+                                                        />
+                                                    ) : (<></>)} {payment.code}
                                                 </td>
-                                                <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center">{payment.code}</td>
                                                 <td className="px-4 py-3 text-gray-600">{payment.user.fullname}</td>
                                                 <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(payment.amount)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`${payment.status == PAYMENT_STATUS.PAID ? "bg-blue-500" : "bg-amber-400"} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
-                                                        {payment.status == PAYMENT_STATUS.PAID ? t('paid') : t('pending_payment')}
+                                                    <span className={`${payment.status == PAYMENT_STATUS.PAID ? "bg-blue-500" : payment.status == PAYMENT_STATUS.CANCEL ? "bg-red-500" : "bg-amber-400"} 
+                                                    px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
+                                                        {payment.status == PAYMENT_STATUS.PAID ? t('paid') : payment.status == PAYMENT_STATUS.CANCEL ? t('cancel'): t('pending_payment')}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.created_at).format("DD-MM-YYYY")}</td>
