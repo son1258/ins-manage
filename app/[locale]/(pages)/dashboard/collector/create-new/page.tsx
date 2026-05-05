@@ -4,7 +4,7 @@ import CustomSelect from '@/components/CustomSelect';
 import InputGroup from '@/components/InputGroup';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import Loading from '@/components/Loading';
@@ -13,14 +13,14 @@ import { handleApiError } from '@/utils/errorHandler';
 import { toast } from 'react-toastify';
 import { createCollector } from '@/services/collectorService';
 import { useRouter } from 'next/navigation';
+import { STATUS } from '@/constants';
 
 export default function CreateCollector() {
     const t = useTranslations();
     const router = useRouter();
-    const locale = useLocale();
     const dispatch = useDispatch();
     const accessToken = Cookies.get('accessToken');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [distributors, setDistributors] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
@@ -49,55 +49,37 @@ export default function CreateCollector() {
 
     const getDistributors = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadDistributors({}, accessToken);
-            if (resp && resp.data) {
-                setDistributors(resp.data);
+        startTransition(async () => {
+            try {
+                const resp = await loadDistributors({status: STATUS.ACTIVE}, accessToken);
+                if (resp && resp.data) {
+                    setDistributors(resp.data);
+                }
+            } catch(err) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get distributors: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
-     const resetForm = () => {
-        setFormData({
-            distributorId: "",
-            code: "",
-            name: ""
-        });
-
-        setErrors({
-            distributorId: false,
-            code: false,
-            name: false,
-        }); 
+        })
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            setIsLoading(true);
-            const data = {
-                distributor_id: formData.distributorId,
-                code: formData.code,
-                name: formData.name
+        startTransition(async () => {
+            try {
+                const data = {
+                    distributor_id: formData.distributorId,
+                    code: formData.code,
+                    name: formData.name
+                }
+                if (!accessToken) return;
+                const resp = await createCollector(data, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t('success'));
+                    router.back();
+                }
+            } catch (err) {
+                handleApiError(err, t);
             }
-            if (!accessToken) return;
-            const resp = await createCollector(data, accessToken);
-            if (resp && resp.success) {
-                toast.success(t('success'));
-                router.back();
-            }
-        } catch (err: any) {
-            console.log('Error create collector:', err.message);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     useEffect(() => {

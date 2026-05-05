@@ -3,7 +3,7 @@
 import { faSearch, faSync, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import Link from 'next/link';
 import InputGroup from '@/components/InputGroup';
@@ -34,7 +34,7 @@ export default function Declarations() {
     const [pageSize, setPageSize] = useState(10);
     const [totalPage, setTotalPage] = useState(0);
     const [orders, setOrders] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [selectedDeclaration, setSelectedDeclaration] = useState(SERVICE_CODE.BHXH);
 
     const declarations = [
@@ -145,19 +145,18 @@ export default function Declarations() {
 
     const getOrders = async (data: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadOrders(data, accessToken);
-            if (resp && resp.success) {
-                setOrders(resp.data);
-                setTotalPage(resp.paginate.total);
+        startTransition(async () => {
+            try {
+                const resp = await loadOrders(data, accessToken);
+                if (resp && resp.success) {
+                    setOrders(resp.data);
+                    setTotalPage(resp.paginate.total);
+                }
+            } catch(err: any) {
+                console.log('Error get medicals: ', err);
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get medicals: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getServiceNameFromCode = (serviceCode: number) => {
