@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
 import { useTranslations } from 'next-intl';
@@ -27,9 +27,8 @@ export default function EditCollector() {
     const acceptedBirthday = dayjs().subtract(18, 'year').format("YYYY-MM-DD");
     const accessToken = Cookies.get('accessToken');
     const role = Cookies.get('userRole');
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [collectors, setCollectors] = useState<any>();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [isMounted, setIsMounted] = useState(false);
 
     const listStatus = [
@@ -47,6 +46,7 @@ export default function EditCollector() {
         birthday: acceptedBirthday,
         username: "",
         avatar: "",
+        status: "",
         distributor: {},
         collectorIds: []
     });
@@ -65,59 +65,56 @@ export default function EditCollector() {
 
     const getUserById = async (id: string) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadUserById(id, accessToken);
-            if (resp && resp.data) {
-                const data = resp.data;
-                const listCollectors = data.collectors;
-                const collectorIds = listCollectors.map((item:any) => item.id);
-                const getDataUser = {
-                    userId: data.id,
-                    fullname: data.fullname || "",
-                    phone: data.phone || "",
-                    nic: data.nic || "" ,
-                    address: data.address || "",
-                    email: data.email || "",
-                    birthday: data.birthday || "",
-                    status: data.status,
-                    username: data.username || "",
-                    avatar: data.avatar || "",
-                    distributor: data.distributor || {},
-                    collectorIds: collectorIds
+        startTransition(async () => {
+            try {
+                const resp = await loadUserById(id, accessToken);
+                if (resp && resp.data) {
+                    const data = resp.data;
+                    const listCollectors = data.collectors;
+                    const collectorIds = listCollectors.map((item:any) => item.id);
+                    const getDataUser = {
+                        userId: data.id,
+                        fullname: data.fullname || "",
+                        phone: data.phone || "",
+                        nic: data.nic || "" ,
+                        address: data.address || "",
+                        email: data.email || "",
+                        birthday: data.birthday || "",
+                        status: data.status,
+                        username: data.username || "",
+                        avatar: data.avatar || "",
+                        distributor: data.distributor || {},
+                        collectorIds: collectorIds
+                    }
+                    setFormData(getDataUser);
+                    getCollectorFromDistributorId(getDataUser.distributor.id);
                 }
-                setFormData(getDataUser);
-                getCollectorFromDistributorId(getDataUser.distributor.id);
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get user: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getCollectorFromDistributorId = async (id: string) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const data = {
-                distributorId: id
+        startTransition(async () => {
+            try {
+                const data = {
+                    distributorId: id,
+                    status: STATUS.ACTIVE
+                }
+                const resp = await loadCollectors(data, accessToken);
+                if (resp && resp.data) {
+                    const standardData = resp.data.map((item: any) => ({
+                        label: item.name,
+                        value: item.id
+                    }))
+                    setCollectors(standardData);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-            const resp = await loadCollectors(data, accessToken);
-            if (resp && resp.data) {
-                const standardData = resp.data.map((item: any) => ({
-                    label: item.name,
-                    value: item.id
-                }))
-                setCollectors(standardData);
-            }
-        } catch(err: any) {
-            console.log('Error get collector from distributor id: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -128,32 +125,30 @@ export default function EditCollector() {
             return;
         }
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const dataUpdateUser = {
-                id: formData.userId,
-                fullname: formData.fullname,
-                phone: formData.phone,
-                nic: formData.nic,
-                address: formData.address,
-                email: formData.email,
-                birthday: formData.birthday,
-                status: formData.status,
-                avatar: formData.avatar,
-                collector_ids: formData.collectorIds
-            }
+        startTransition(async () => {
+            try {
+                const dataUpdateUser = {
+                    id: formData.userId,
+                    fullname: formData.fullname,
+                    phone: formData.phone,
+                    nic: formData.nic,
+                    address: formData.address,
+                    email: formData.email,
+                    birthday: formData.birthday,
+                    status: formData.status,
+                    avatar: formData.avatar,
+                    collector_ids: formData.collectorIds
+                }
 
-            const resp = await updateUser(dataUpdateUser, accessToken);
-            if (resp && resp.data) {
-                toast.success(t('success'));
-                router.back();
+                const resp = await updateUser(dataUpdateUser, accessToken);
+                if (resp && resp.data) {
+                    toast.success(t('success'));
+                    router.back();
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error update user: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     useEffect(() => {
@@ -255,7 +250,7 @@ export default function EditCollector() {
                                     />
                                     {isMounted && role === 'admin' && (
                                         <div className="flex flex-col gap-1.5">
-                                            <label className="text-sm font-semibold text-gray-700">{t('status')}</label>
+                                            <label className="text-sm text-gray-700 mb-1">{t('status')}</label>
                                             <CustomSelect
                                                 placeholder={t('select_option')}
                                                 value={formData.status} 

@@ -3,7 +3,7 @@
 import InputGroup from "@/components/InputGroup";
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
@@ -17,7 +17,7 @@ export default function CreateNewDistributor() {
     const t = useTranslations();
     const dispatch = useDispatch();
     const accessToken = Cookies.get('accessToken');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [providers, setProviders] = useState<any[]>([]);
 
     const [formData, setFormData] = useState({
@@ -45,18 +45,16 @@ export default function CreateNewDistributor() {
 
     const getProviders = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadProviders(accessToken);
-            if (resp && resp.data) {
-                setProviders(resp.data);
+        startTransition(async () => {
+            try {
+                const resp = await loadProviders(accessToken);
+                if (resp && resp.data) {
+                    setProviders(resp.data);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get providers: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const resetForm = () => {
@@ -74,25 +72,23 @@ export default function CreateNewDistributor() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            setIsLoading(true);
-            const data = {
-                provider_id: formData.providerId,
-                code: formData.distributorCode,
-                name: formData.distributorName
+        startTransition(async () => {
+            try {
+                const data = {
+                    provider_id: formData.providerId,
+                    code: formData.distributorCode,
+                    name: formData.distributorName
+                }
+                if (!accessToken) return;
+                const resp = await createDistributor(data, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t('success'));
+                    resetForm();
+                }
+            } catch (err: any) {
+                handleApiError(err, t);
             }
-            if (!accessToken) return;
-            const resp = await createDistributor(data, accessToken);
-            if (resp && resp.success) {
-                toast.success(t('success'));
-                resetForm();
-            }
-        } catch (err: any) {
-            console.log('Error create distributor:', err.message);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     useEffect(() => {

@@ -3,7 +3,7 @@
 import { faSearch, faSync, faTrash, faFileAlt, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -39,7 +39,7 @@ export default function Payment() {
     const [payments, setPayments] = useState<any[]>([]);
     const [totalItems, setTotalItems] = useState(0);
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [showModal, setShowModal] = useState(false);
     const [modalTerminate, setModalTerminate] = useState(false);
     const [selectItem, setSelectItem] = useState<any>();
@@ -124,62 +124,56 @@ export default function Payment() {
 
     const handleTerminatePayment = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const data = {
-                batch_payment_id: batchPaymentId
+        startTransition(async () => {
+            try {
+                const data = {
+                    batch_payment_id: batchPaymentId
+                }
+                const resp = await terminatePayment(data, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t('success'));
+                    handleRefresh();
+                    setModalTerminate(false);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-            const resp = await terminatePayment(data, accessToken);
-            if (resp && resp.success) {
-                toast.success(t('success'));
-                handleRefresh();
-                setModalTerminate(false);
-            }
-        } catch(err: any) {
-            console.log('Error terminate payment: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getListOrders = async (batchPaymentId: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const data = {
-                page: currentSubPage,
-                limit: subPageSize,
-                batchPaymentId: batchPaymentId
+        startTransition(async () => {
+            try {
+                const data = {
+                    page: currentSubPage,
+                    limit: subPageSize,
+                    batchPaymentId: batchPaymentId
+                }
+                const resp = await loadListOrderByBatchPaymentId(data, accessToken);
+                if (resp && resp.data) {
+                    setListOrders(resp.data);
+                    setSubTotalItems(resp.paginate.total);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-            const resp = await loadListOrderByBatchPaymentId(data, accessToken);
-            if (resp && resp.data) {
-                setListOrders(resp.data);
-                setSubTotalItems(resp.paginate.total);
-            }
-        } catch(err: any) {
-            console.log('Error get list orders: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getPayments = async(data: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadPayments(data, accessToken);
-            if (resp && resp.data) {
-                setPayments(resp.data);
-                setTotalItems(resp.paginate.total);
+        startTransition(async () => {
+            try {
+                const resp = await loadPayments(data, accessToken);
+                if (resp && resp.data) {
+                    setPayments(resp.data);
+                    setTotalItems(resp.paginate.total);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get payments: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getServiceNameFromCode = (serviceCode: number) => {

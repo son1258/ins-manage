@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
@@ -29,7 +29,7 @@ export default function Collector() {
     const accessToken = Cookies.get('accessToken');
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [totalItems, setTotalItems] = useState(0);
     const [distributors, setDistributors] = useState<any[]>([]);
     const [collectors, setCollectors] = useState<any[]>([]);
@@ -99,35 +99,31 @@ export default function Collector() {
 
     const getDistributors = async (data: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadDistributors(data, accessToken);
-            if (resp && resp.data) {
-                setDistributors(resp.data);
+        startTransition(async () => {
+            try {
+                const resp = await loadDistributors(data, accessToken);
+                if (resp && resp.data) {
+                    setDistributors(resp.data);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get distributors: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getCollectors = async (data: any) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadCollectors(data, accessToken);
-            if (resp && resp.data) {
-                setCollectors(resp.data);
-                setTotalItems(resp.paginate.total);
-            }
-        } catch(err: any) {
-            console.log('Error get collectors: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        startTransition(async () => {
+            try {
+                const resp = await loadCollectors(data, accessToken);
+                if (resp && resp.data) {
+                    setCollectors(resp.data);
+                    setTotalItems(resp.paginate.total);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
+            } 
+        })
     }
 
     const handleSelectDisableCollector = (item: any) => {
@@ -136,27 +132,25 @@ export default function Collector() {
     }
 
     const updateStateCollector = async () => {
-        try {
-            if (!accessToken) return;
-            setIsLoading(true);
-            const data = {
-                id: selectedCollector.id,
-                code: selectedCollector.code,
-                name: selectedCollector.name,
-                distributor_id: selectedCollector.distributor_id
+        startTransition(async () => {
+            try {
+                if (!accessToken) return;
+                const data = {
+                    id: selectedCollector.id,
+                    code: selectedCollector.code,
+                    name: selectedCollector.name,
+                    distributor_id: selectedCollector.distributor_id
+                }
+                const resp = await disableCollector(data, accessToken);
+                if (resp && resp.success) {
+                    setOpenModal(false);
+                    toast.success(t('success'));
+                    handleRefresh();
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-            const resp = await disableCollector(data, accessToken);
-            if (resp && resp.success) {
-                setOpenModal(false);
-                toast.success(t('success'));
-                handleRefresh();
-            }
-        } catch(err: any) {
-            console.log('Error disable collector: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     useEffect(() => {

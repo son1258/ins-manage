@@ -4,7 +4,7 @@ import CustomSelect from '@/components/CustomSelect';
 import InputGroup from '@/components/InputGroup';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import Loading from '@/components/Loading';
@@ -14,13 +14,14 @@ import { toast } from 'react-toastify';
 import { loadCollectors } from '@/services/collectorService';
 import { createNewUser } from '@/services/userService';
 import { useRouter } from 'next/navigation';
+import { STATUS } from '@/constants';
 
 export default function CreateCollector() {
     const t = useTranslations();
     const dispatch = useDispatch();
     const router = useRouter();
     const accessToken = Cookies.get('accessToken');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, startTransition] = useTransition();
     const [distributors, setDistributors] = useState<any[]>([]);
     const [collectors, setCollectors] = useState<any[]>([]);
 
@@ -64,34 +65,37 @@ export default function CreateCollector() {
 
     const getDistributors = async () => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadDistributors({}, accessToken);
-            if (resp && resp.data) {
-                setDistributors(resp.data);
+        startTransition(async () => {
+            try {
+                const data = {
+                    status: STATUS.ACTIVE
+                }
+                const resp = await loadDistributors(data, accessToken);
+                if (resp && resp.data) {
+                    setDistributors(resp.data);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get distributors: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const getCollectorFromDistributorId = async (id: string) => {
         if (!accessToken) return;
-        try {
-            setIsLoading(true);
-            const resp = await loadCollectors({distributorId: id}, accessToken);
-            if (resp && resp.data) {
-                setCollectors(resp.data);
+        startTransition(async () => {
+            try {
+                const data = {
+                    distributorId: id,
+                    status: STATUS.ACTIVE
+                }
+                const resp = await loadCollectors(data, accessToken);
+                if (resp && resp.data) {
+                    setCollectors(resp.data);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
             }
-        } catch(err: any) {
-            console.log('Error get collectors: ', err);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     const resetForm = () => {
@@ -127,28 +131,26 @@ export default function CreateCollector() {
             toast.error(t('err_field_required'));
         }
         if (!accessToken || isEmpty) return;
-        try {
-            setIsLoading(true);
-            const data = {
-                username: formData.username,
-                fullname: formData.fullname,
-                password: formData.password,
-                email: formData.email,
-                distributor_id: formData.distributorId,
-                collector_ids: formData.collectorIds
+        startTransition(async () => {
+            try {
+                const data = {
+                    username: formData.username,
+                    fullname: formData.fullname,
+                    password: formData.password,
+                    email: formData.email,
+                    distributor_id: formData.distributorId,
+                    collector_ids: formData.collectorIds
+                }
+                const resp = await createNewUser(data, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t('success'));
+                    resetForm();
+                    router.back();
+                }
+            } catch (err: any) {
+                handleApiError(err, t);
             }
-            const resp = await createNewUser(data, accessToken);
-            if (resp && resp.success) {
-                toast.success(t('success'));
-                resetForm();
-                router.back();
-            }
-        } catch (err: any) {
-            console.log('Error create new user:', err.message);
-            handleApiError(err, t);
-        } finally {
-            setIsLoading(false);
-        }
+        })
     }
 
     useEffect(() => {
