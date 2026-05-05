@@ -301,7 +301,6 @@ export default function Payment() {
                             <table className="w-full text-[13px] text-left border-collapse">
                                 <thead>
                                     <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
-                                        <th className="px-4 py-3 w-10"></th>
                                         <th className="px-4 py-3 border-r border-white/20 text-center">{t('payment_request_id')}</th>
                                         <th className="px-4 py-3 border-r border-white/20">{t('creator')}</th>
                                         <th className="px-4 py-3 border-r border-white/20">{t('total_amount')}</th>
@@ -338,18 +337,22 @@ export default function Payment() {
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.created_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
-                                                    <button 
-                                                        onClick={() => handleShowOr(payment)}
+                                                    {payment.status !== PAYMENT_STATUS.CANCEL && (
+                                                        <>
+                                                        <button 
+                                                            onClick={() => handleShowOr(payment)}
 
-                                                        className="hover:text-blue-600">
-                                                        <FontAwesomeIcon icon={faQrcode} />
-                                                    </button>
-                                                    {payment.status != PAYMENT_STATUS.PAID && 
-                                                        <button
-                                                            onClick={() => onTerminatePayment(payment.id)} 
-                                                            className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
+                                                            className="hover:text-blue-600">
+                                                            <FontAwesomeIcon icon={faQrcode} />
                                                         </button>
-                                                    }
+                                                        {payment.status != PAYMENT_STATUS.PAID && 
+                                                            <button
+                                                                onClick={() => onTerminatePayment(payment.id)} 
+                                                                className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
+                                                            </button>
+                                                        }
+                                                        </>
+                                                    )}
                                                 </td>
                                             </tr>
 
