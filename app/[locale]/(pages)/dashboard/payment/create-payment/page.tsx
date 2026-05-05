@@ -51,7 +51,7 @@ export default function CreatePaymentRequest() {
         serviceCode: null,
         medicalCode: "",
         customerName: "",
-        status: "",
+        status: PAYMENT_STATUS.RECORDED,
         plan: "",
         fromDate: today,
         toDate: today
@@ -163,23 +163,17 @@ export default function CreatePaymentRequest() {
         }
     }
 
-    const filterOrders = (listOrders: any) => {
-        const values = listOrders.filter((item: any) => item.status == PAYMENT_STATUS.RECORDED);
-        return values;
-    }
-
     const getOrders = async (data: any) => {
         if (!accessToken) return;
         try {
             setIsLoading(true);
             const resp = await loadOrders(data, accessToken);
             if (resp && resp.success) {
-                const newOrders = filterOrders(resp.data);
-                setOrders(newOrders);
+                setOrders(resp.data);
                 setTotalItems(resp.paginate.total);
             }
         } catch(err: any) {
-            console.log('Error get medicals: ', err);
+            console.log('Error get orders: ', err);
             handleApiError(err, t);
         } finally {
             setIsLoading(false);
@@ -294,7 +288,7 @@ export default function CreatePaymentRequest() {
             serviceCode: serviceCode,
             medicalCode: medicalCodeParams || "",
             customerName: customerNameParams || "",
-            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : "",
+            status: (statusParams != null) ? Number(statusParams) : PAYMENT_STATUS.RECORDED,
             plan: planParams || "",
             fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
             toDate: toDateParams || today.format("YYYY-MM-DD"),
