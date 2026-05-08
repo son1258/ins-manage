@@ -44,7 +44,6 @@ export default function Payment() {
     const [modalTerminate, setModalTerminate] = useState(false);
     const [selectItem, setSelectItem] = useState<any>();
     const [listOrders, setListOrders] = useState<any>();
-    const [selectedOrder, setSelectedOrder] = useState<any>();
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
     const [subTotalItems, setSubTotalItems] = useState(0);
@@ -81,8 +80,18 @@ export default function Payment() {
         setSelectItem(item);
     }
 
-    const toggleRow = (id: string) => {
-        setExpandedRow(expandedRow === id ? null : id);
+    const toggleRow = (payment: any) => {
+        if (payment.status === PAYMENT_STATUS.RECORDED) {
+            setListOrders([]);
+            if (expandedRow === payment.id) {
+                setExpandedRow(null);
+                return;
+            } else {
+                setExpandedRow(payment.id);
+                getListOrders(payment.id);
+            }
+        }
+        return;
     };
 
     const handleRefresh = () => {
@@ -180,18 +189,6 @@ export default function Payment() {
         const find = declarations.find((item: any) => item.code == serviceCode);
         return find?.acronym.toUpperCase();
     }
-
-    useEffect(() => {
-        if (!selectedOrder) return;
-        setListOrders([]);
-        getListOrders(selectedOrder.id);
-    },[currentSubPage, subPageSize])
-
-    useEffect(() => {
-        if (!selectedOrder) return;
-        setListOrders([]);
-        getListOrders(selectedOrder.id);
-    },[selectedOrder])
 
     useEffect(() => {
         dispatch(setActiveTitle(t('payment_request')));
@@ -309,12 +306,11 @@ export default function Payment() {
                                         <React.Fragment key={payment.id}>
                                             <tr 
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
-                                                onClick={() => toggleRow(payment.id)}
                                             >
                                                 <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
-                                                    {payment.status !== PAYMENT_STATUS.CANCEL ? (
+                                                    {payment.status === PAYMENT_STATUS.RECORDED ? (
                                                         <FontAwesomeIcon 
-                                                            onClick={() => setSelectedOrder(payment)}
+                                                            onClick={() => toggleRow(payment)}
                                                             icon={expandedRow === payment.id ? faChevronDown : faChevronRight} 
                                                             className="text-gray-400 text-xs"
                                                         />
