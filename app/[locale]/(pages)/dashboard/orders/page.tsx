@@ -386,13 +386,13 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD/MM/YYYY")}</td>
                                             <td className="px-4 py-3 text-gray-600">{order.ngay_bien_lai}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <span className="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
-                                                    {order.status == PAYMENT_STATUS.RECORDED ? t('recorded') : t('paid') }
+                                                <span className={`${order.status == PAYMENT_STATUS.RECORDED ? 'bg-green-600' : order.status == PAYMENT_STATUS.WAIT_PAID ? 'bg-amber-400' : 'bg-blue-600'} text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap`}>
+                                                    {order.status == PAYMENT_STATUS.RECORDED ? t('recorded') : order.status == PAYMENT_STATUS.WAIT_PAID ? t('pending_payment') : t('paid') }
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right">{order.distributors_order_number}</td>
                                             <td className="px-4 py-3 text-right">
-                                                <span className="bg-green-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
+                                                <span className="bg-blue-600 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap">
                                                     {t('paid')}
                                                 </span>
                                             </td>
