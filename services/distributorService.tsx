@@ -13,14 +13,13 @@ export const loadDistributors = (params: any, token: string) => {
         queryParams.push(`status=${params.status}`)
     }
     if (params.providerCode) {
-        queryParams.push(`provider_code=${params.providerCode}`);
+        queryParams.push(`provider_code=${params.providerCode}`)
     }
     if (params.distributorCode) {
-        queryParams.push(`code=${params.distributorCode}`);
+        queryParams.push(`code=${params.distributorCode}`)
     }
     if (params.distributorName) {
         queryParams.push(`name=${params.distributorName}`)
-
     }
 
     if (queryParams.length > 0) {

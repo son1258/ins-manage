@@ -1,7 +1,6 @@
 "use client"
 
 import Loading from "@/components/Loading";
-import { callApi } from "@/services/callApi";
 import { faEye, faEyeSlash, faLock, faUser } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { useLocale, useTranslations } from "next-intl"
@@ -10,14 +9,12 @@ import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
-import { setUserInfo } from "@/lib/redux/slices/userSlice";
 import { login } from "@/services/userService";
 
 export default function Login() {
     const t = useTranslations();
     const router = useRouter();
     const locale = useLocale();
-    const dispatch = useDispatch();
     const [isHidePwd, setIsHidePwd] = useState(true);
     const [isLoading, setIsloading] = useState(false);
     const [formLogin, setFormLogin] = useState({
@@ -67,6 +64,7 @@ export default function Login() {
                     path: '/',
                     expires: resp.data.expires_in / 86400
                 });
+                Cookies.set("username", resp.data.username);
                 router.push(`/${locale || 'vi'}/dashboard`);
             }
         } catch(err: any) {

@@ -18,8 +18,8 @@ export const loadCollectors = (params: any, token: string) => {
     if (params.collectorName) {
         queryParams.push(`name=${params.collectorName}`);
     }
-    if (params.distributorId) {
-        queryParams.push(`distributor_id=${params.distributorId}`);
+    if (params.providerId) {
+        queryParams.push(`provider_id=${params.providerId}`);
     }
 
     if (queryParams.length > 0) {

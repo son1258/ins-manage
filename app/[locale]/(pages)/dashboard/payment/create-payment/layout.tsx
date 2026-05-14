@@ -1,7 +1,7 @@
 "use client"
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useState, useTransition } from 'react';
+import { useMemo, useTransition } from 'react';
 import { useSelector } from 'react-redux'; 
 import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import Loading from '@/components/Loading';
 import { toast } from 'react-toastify';
 import { PAYMENT_STATUS } from '@/constants';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function CreatePaymentLayout({ children }: { children: React.ReactNode }) {
     const t = useTranslations();
@@ -18,12 +19,23 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
         totalAmount, 
         excludedItems, 
         isPaymentAllDate, 
-        batchPayments 
+        batchPayments,
+        isSynced
     } = useSelector((state: any) => state.payment);
     const accessToken = Cookies.get('accessToken');
     const [isLoading, startTransition] = useTransition();
     const router = useRouter();
     const locale = useLocale();
+    const queryClient = useQueryClient();
+
+    const isDisablePayment = useMemo(() => {
+        if (isPaymentAllDate) {
+            if (!batchPayments?.id) return true
+            if (excludedItems.length > 0 && !isSynced) return true
+            return false
+        }
+        return !selectedItems || selectedItems.length === 0
+    }, [isPaymentAllDate, batchPayments, excludedItems, isSynced, selectedItems])
 
     const createPayment = async () => {
         if (!totalAmount || !accessToken) return;
@@ -41,7 +53,8 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                 }
                 if (resp && resp.success) {
                     toast.success(t("success"));
-                    router.push(`/${locale}/dashboard/payment`)
+                    router.push(`/${locale}/dashboard/payment`);
+                    await queryClient.invalidateQueries({queryKey: ['payments']})
                 }
             }catch(err: any) {
                 handleApiError(err, t);
@@ -75,11 +88,9 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
 
                     <button
                         onClick={createPayment}
-                        disabled={isPaymentAllDate ? 
-                            (excludedItems.length == 0 ? true : Object.keys(batchPayments).length === 0) : 
-                            (!selectedItems || selectedItems.length === 0)}
+                        disabled={isDisablePayment}
                         className={`px-8 py-3 rounded-md font-bold text-sm transition-all shadow-md
-                            ${(isPaymentAllDate ? (excludedItems.length == 0 ? true : batchPayments.id) : selectedItems?.length > 0)
+                            ${!isDisablePayment
                                 ? 'bg-[#1e3a5f] text-white hover:bg-[#152944] active:scale-95' 
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}

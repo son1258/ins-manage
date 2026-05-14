@@ -37,6 +37,7 @@
     "update": "Update",
     "info_distributor": "Unit Information",
     "disable_distributor": "Do you want to deactivate this unit?",
+    "disable_collector": "Do you want to deactivate this collector?",
     "terminate_order": "Do you want to cancel this order?",
     "payment_request": "Payment Request",
     "list_declaration": "Declaration List",
@@ -77,6 +78,7 @@
     "social_method": "Contribution Method",
 
     "success": "Success",
+    "err_get_data": "Error load the list data",
     "err_login": "Login Failed",
     "err_create_failed": "Creation Failed",
     "err_server_maintenance": "Server error, please try again later",
@@ -88,6 +90,7 @@
     "err_field_required": "Please fill in all required fields",
     "err_birthday": "User must be at least 18 years old",
 
+    "type": "Type",
     "new": "New (New Card Issuance)",
     "renewal": "Renewal",
     "decrease": "Termination",

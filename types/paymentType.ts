@@ -3,7 +3,8 @@ export type PaymentProps = {
     selectedItems: Item[],
     excludedItems: Item[],
     totalAmount: number,
-    isPaymentAllDate: boolean
+    isPaymentAllDate: boolean,
+    isSynced: boolean
 }
 
 export type Item = {

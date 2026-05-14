@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
@@ -13,10 +13,8 @@ import { STATUS } from '@/constants';
 import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import CustomSelect from '@/components/CustomSelect';
-import { handleApiError } from '@/utils/errorHandler';
 import Modal from '@/components/Modal';
-import { toast } from 'react-toastify';
-import { disableUser, loadListUsers } from '@/services/userService';
+import { useDisableUser, useUserList } from '@/hooks/useUser';
 
 export default function User() {
     const t = useTranslations();
@@ -25,27 +23,41 @@ export default function User() {
     const dispatch = useDispatch();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const accessToken = Cookies.get('accessToken');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [isLoading, startTransition] = useTransition();
-    const [totalItems, setTotalItems] = useState(0);
-    const [users, setUsers] = useState<any[]>([]);
+    const accessToken = Cookies.get('accessToken') || '';
     const [selectedUser, setSelectedUser] = useState<any>();
     const [openModal, setOpenModal] = useState(false);
-
     const listStatus = [
         {code: STATUS.ACTIVE, name: t('active')},
         {code: STATUS.DEACTIVE, name: t('deactive')},
     ];
 
-    const [formData, setFormData] = useState({
+    const defaultParams = {
         username: "",
         fullname: "",
         status: STATUS.ACTIVE,
         page: 1,
-        limit: 10
-    })
+        limit: 10 
+    }
+
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = Number(searchParams.get('limit')) || 10;
+    const status = searchParams.get('status') != null ? Number(searchParams.get('status')) : STATUS.ACTIVE;
+    const params = {
+        username: searchParams.get('username') || "",
+        fullname: searchParams.get('fullname') || "",
+        status: status,
+        page: page,
+        limit: limit
+    }
+
+    const [formData, setFormData] = useState(params);
+    const {data, isLoading, isError} : any = useUserList(params, accessToken);
+    const users = isError ? [] : (data?.data || []);
+    const disableMutation = useDisableUser(accessToken, t);
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t('user')))
+    },[t])
 
     const createNew = () => {
         router.push(`/${locale}/dashboard/user/create-new`)
@@ -60,50 +72,40 @@ export default function User() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        const params = new URLSearchParams();
-        params.set('limit', String(formData.limit));
-        params.set('page', '1');
-        params.set('status', String(formData.status));
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('status', String(formData.status));
         if (formData.username) {
-            params.set('username', formData.username);
+            newParams.set('username', formData.username);
         }
         if (formData.fullname) {
-            params.set('fullname', formData.fullname);
+            newParams.set('fullname', formData.fullname);
         }
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleRefresh = () => {
-        router.push(pathname);
+        setFormData(defaultParams)
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('status', String(STATUS.ACTIVE));
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handlePageChange = (page: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('page', String(page));
+        const p = new URLSearchParams(searchParams.toString());
+        p.set('page', String(page));
         handleValueChange('page', page);
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${p.toString()}`);
     }
 
     const handleLimitChange = (limit: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('limit', String(limit));
-        params.set('page', '1');
-        router.push(`${pathname}?${params.toString()}`);
-    }
-
-    const getUsers = async (data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadListUsers(data, accessToken);
-                if (resp && resp.data) {
-                    setUsers(resp.data);
-                    setTotalItems(resp.paginate.total);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
+        const p = new URLSearchParams(searchParams.toString());
+        p.set('limit', String(limit));
+        p.set('page', '1');
+        router.push(`${pathname}?${p.toString()}`);
     }
 
     const handleSelectDisableUser = (item: any) => {
@@ -111,47 +113,16 @@ export default function User() {
         setSelectedUser(item);
     }
 
-    const updateStateUser = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await disableUser({id: selectedUser.id }, accessToken);
-                if (resp && resp.success) {
-                    setOpenModal(false);
-                    toast.success(t('success'));
-                    const params = new URLSearchParams();
-                    params.set('limit', String(formData.limit));
-                    params.set('page', '1');
-                    params.set('status', String(formData.status));
-                    router.push(`${pathname}?${params.toString()}`);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
+    const onConfirmDisable = async () => {
+        if (!selectedUser) return;
+        try {
+            await disableMutation.mutateAsync(selectedUser.id);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setOpenModal(false);
+        }
     }
-
-    useEffect(() => {
-        dispatch(setActiveTitle(t('user')));
-        const fullnameParams = searchParams.get('fullname') || "";
-        const usernameParams = searchParams.get('username') || "";
-        const statusParams = searchParams.get('status');
-        const limitParams = Number(searchParams.get('limit')) || 10;
-        const pageParams = Number(searchParams.get('page')) || 1;
-
-        const dataFromUrl = {
-            username: usernameParams,
-            fullname: fullnameParams,
-            status: (statusParams !== "" && statusParams !== null) ? Number(statusParams) : STATUS.ACTIVE,
-            page: pageParams,
-            limit: limitParams
-        };
-
-        setFormData(dataFromUrl);
-        setPageSize(dataFromUrl.limit);
-        setCurrentPage(dataFromUrl.page);
-        getUsers(dataFromUrl);
-    },[searchParams])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
@@ -224,13 +195,13 @@ export default function User() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {users.map((user, index) => (
+                                {users.map((user: any, index: number) => (
                                     <tr key={user.id} className="hover:bg-blue-50/30 transition-colors">
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{user.username}</td>
                                         <td className="px-4 py-3 text-gray-700">{user.fullname}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                                                 user.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
                                             }`}>
                                                 {user.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
@@ -257,9 +228,9 @@ export default function User() {
                         </table>
                     </div>
                     <Pagination
-                        currentPage={currentPage}
-                        totalItems={totalItems}
-                        pageSize={pageSize}
+                        currentPage={page}
+                        totalItems={data?.paginate?.total || 0}
+                        pageSize={limit}
                         onPageChange={(page) => handlePageChange(page)}
                         onPageSizeChange={(limit) => handleLimitChange(limit)}
                     />
@@ -268,10 +239,10 @@ export default function User() {
             <Modal 
                 isOpen={openModal} 
                 title={t('disable_user')} 
-                onConfirm={updateStateUser} 
+                onConfirm={onConfirmDisable} 
                 onClose={() => setOpenModal(false)} 
             />
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoading || disableMutation.isPending} />
         </div>
   );
 }
