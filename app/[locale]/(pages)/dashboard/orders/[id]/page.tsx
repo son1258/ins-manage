@@ -173,14 +173,7 @@ export default function OrderDetail() {
 				<div className="col-span-1">
 					<InputGroup
 					label={t("social_ins_authority")}
-					value={order.collector.distributor.provider.name}
-					readOnly
-					/>
-				</div>
-				<div className="col-span-1">
-					<InputGroup
-					label={t("distributor")}
-					value={order.collector.distributor.name}
+					value={order.collector.provider.name}
 					readOnly
 					/>
 				</div>
