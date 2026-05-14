@@ -1,9 +1,9 @@
 "use client"
 
-import { faSearch, faSync, faTrash, faFileAlt, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faTrash, faFileAlt, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes, faCheck} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -20,6 +20,10 @@ import { formatVND } from '@/utils/common';
 import Loading from '@/components/Loading';
 import Modal from '@/components/Modal';
 import { useListOrdersInBatchPayment, usePaymentList, useTerminatePaymentMutation } from '@/hooks/usePayment';
+import { confirmPayment } from '@/services/paymentService';
+import { toast } from 'react-toastify';
+import { handleApiError } from '@/utils/errorHandler';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Payment() {
     const t = useTranslations();
@@ -31,6 +35,7 @@ export default function Payment() {
     const accessToken = Cookies.get('accessToken') || "";
     const today = dayjs();
     const from = today.subtract(6, "day");
+    const queryClient = useQueryClient();
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [modalTerminate, setModalTerminate] = useState(false);
@@ -38,6 +43,7 @@ export default function Payment() {
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
     const [batchPaymentId, setBatchPaymentId] = useState('');
+    const [isLoadingConfirm, startTransition] = useTransition();
 
     const status = [
         {code: PAYMENT_STATUS.PAID, name: t('paid')},
@@ -95,7 +101,7 @@ export default function Payment() {
     }
 
     const toggleRow = (payment: any) => {
-        if (payment.status !== PAYMENT_STATUS.RECORDED) return;
+        if (payment.status !== PAYMENT_STATUS.WAIT_PAID) return;
         setExpandedRow(prev => {
             if (prev === payment.id) return null
             return payment.id;
@@ -153,6 +159,7 @@ export default function Payment() {
             }
             await terminatePaymentMutation.mutateAsync(data);
             setModalTerminate(false);
+            setExpandedRow(null);
         }
     }
 
@@ -165,8 +172,24 @@ export default function Payment() {
         const statusMap: Record<string, { bg: string; label: string }> = {
             [PAYMENT_STATUS.PAID]:   { bg: 'bg-blue-500', label: t('paid') },
             [PAYMENT_STATUS.CANCEL]: { bg: 'bg-red-500',  label: t('cancel') },
+            [PAYMENT_STATUS.WAIT_PAID]: { bg: 'bg-amber-500',  label: t('pending_payment') },
         }
-        return statusMap[status] ?? { bg: 'bg-amber-400', label: t('pending_payment') }
+        return statusMap[status] ?? { bg: 'bg-green-400', label: t('record') }
+    }
+
+    const handleConfirmPayment = (payment: any) => {
+        startTransition(async () => {
+            try {
+                const resp = await confirmPayment({batch_payment_id: payment.id}, accessToken);
+                if (resp && resp.success) {
+                    toast.success(t("success"));
+                    await queryClient.invalidateQueries({queryKey: ['payments']})
+                }
+                } catch(err: any) {
+                    handleApiError(err, t);
+                }
+            }
+        )
     }
 
     useEffect(() => {
@@ -267,7 +290,7 @@ export default function Payment() {
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
                                             >
                                                 <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
-                                                    {payment.status === PAYMENT_STATUS.RECORDED ? (
+                                                    {payment.status === PAYMENT_STATUS.WAIT_PAID ? (
                                                         <FontAwesomeIcon 
                                                             onClick={() => toggleRow(payment)}
                                                             icon={expandedRow === payment.id ? faChevronDown : faChevronRight} 
@@ -292,13 +315,20 @@ export default function Payment() {
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
                                                     {payment.status !== PAYMENT_STATUS.CANCEL && (
                                                         <div className='flex items-center justify-center w-full gap-2'>
-                                                            <button 
-                                                                onClick={() => handleShowOr(payment)}
-
-                                                                className="hover:text-blue-600">
-                                                                <FontAwesomeIcon icon={faQrcode} />
-                                                            </button>
-                                                            {payment.status != PAYMENT_STATUS.PAID && 
+                                                            {payment.status === PAYMENT_STATUS.RECORDED ? ( 
+                                                                <button 
+                                                                    onClick={() => handleConfirmPayment(payment)}
+                                                                    className="hover:text-blue-600">
+                                                                    <FontAwesomeIcon icon={faCheck} />
+                                                                </button>
+                                                            ) : (
+                                                                <button 
+                                                                    onClick={() => handleShowOr(payment)}
+                                                                    className="hover:text-blue-600">
+                                                                    <FontAwesomeIcon icon={faQrcode} />
+                                                                </button>
+                                                            )}
+                                                            {(payment.status !== PAYMENT_STATUS.PAID || payment.status === PAYMENT_STATUS.RECORDED) && 
                                                                 <button
                                                                     onClick={() => onSelectedTerminatePayment(payment.id)} 
                                                                     className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
@@ -443,7 +473,7 @@ export default function Payment() {
                 onConfirm={onConfirmTerminatePayment} 
                 onClose={() => setModalTerminate(false)} 
             />
-            <Loading stateShow={isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending} />
+            <Loading stateShow={isLoadingConfirm || isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending} />
         </div>
     )
 }

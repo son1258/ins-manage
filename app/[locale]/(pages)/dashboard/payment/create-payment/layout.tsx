@@ -56,7 +56,7 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                     router.push(`/${locale}/dashboard/payment`);
                     await queryClient.invalidateQueries({queryKey: ['payments']})
                 }
-            }catch(err: any) {
+            } catch(err: any) {
                 handleApiError(err, t);
             }
         })

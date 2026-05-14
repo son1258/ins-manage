@@ -215,6 +215,7 @@ export default function CreatePaymentRequest() {
                             toDate: formData.toDate,
                         }));
                         dispatch(setIsSynced(true));
+                        queryClient.invalidateQueries({queryKey: ['payments']})
                     } 
                 } catch(err: any) {
                     handleApiError(err, t);
@@ -240,7 +241,8 @@ export default function CreatePaymentRequest() {
                 const resp = await updatePaymentWithFilter(data, accessToken);
                 if (resp && resp.success) {
                     handleDataPaymentWithDate(resp.data[0]);
-                    dispatch(setIsSynced(true))
+                    dispatch(setIsSynced(true));
+                    queryClient.invalidateQueries({queryKey: ['payments']})
                 }
             } catch(err: any) {
                 handleApiError(err, t);
