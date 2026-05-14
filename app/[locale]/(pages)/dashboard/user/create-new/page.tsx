@@ -4,27 +4,23 @@ import CustomSelect from '@/components/CustomSelect';
 import InputGroup from '@/components/InputGroup';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import Loading from '@/components/Loading';
-import { loadDistributors } from '@/services/distributorService';
 import { handleApiError } from '@/utils/errorHandler';
 import { toast } from 'react-toastify';
-import { loadCollectors } from '@/services/collectorService';
-import { createNewUser } from '@/services/userService';
 import { useRouter } from 'next/navigation';
 import { STATUS } from '@/constants';
+import { useDistributorList } from '@/hooks/useDistributor';
+import { useCollectorList } from '@/hooks/useCollector';
+import { useCreateUserMutation } from '@/hooks/useUser';
 
 export default function CreateCollector() {
     const t = useTranslations();
     const dispatch = useDispatch();
     const router = useRouter();
-    const accessToken = Cookies.get('accessToken');
-    const [isLoading, startTransition] = useTransition();
-    const [distributors, setDistributors] = useState<any[]>([]);
-    const [collectors, setCollectors] = useState<any[]>([]);
-
+    const accessToken = Cookies.get('accessToken') || '';
     const [formData, setFormData] = useState({
         username: "",
         password: "",
@@ -33,6 +29,16 @@ export default function CreateCollector() {
         distributorId: "",
         collectorIds: []
     });
+
+    const {data: distributorsRes, isLoading: isLoadDist} = useDistributorList({status: STATUS.ACTIVE}, accessToken)
+    const {data: collectorsRes, isLoading: isLoadColl} : any = useCollectorList(
+        {status: STATUS.ACTIVE, distributorId: formData.distributorId},
+        accessToken,
+        { enabled: !!accessToken && !!formData.distributorId }
+    )
+    const createMutation = useCreateUserMutation(accessToken);
+    const distributors = distributorsRes?.data || [];
+    const collectors = collectorsRes?.data || [];
 
     const [errors, setErrors] = useState<any>({
         username: false,
@@ -43,14 +49,18 @@ export default function CreateCollector() {
         collectorIds: false
     })
 
+    useEffect(() => {
+        dispatch(setActiveTitle(t('add_new_user')));
+    }, [t])
+
     const handleValueChange = (nameField: string, value: any) => {
-        if (nameField == "distributorId") {
-            setCollectors([]);
+        if (nameField === "distributorId") {
             setFormData(prev => ({
                 ...prev,
+                distributorId: value,
                 collectorIds: []
             }))
-            getCollectorFromDistributorId(value);
+            return;
         }
         setFormData(prev => ({
             ...prev,
@@ -62,101 +72,33 @@ export default function CreateCollector() {
             [nameField]: !value
         }));
     }
-
-    const getDistributors = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    status: STATUS.ACTIVE
-                }
-                const resp = await loadDistributors(data, accessToken);
-                if (resp && resp.data) {
-                    setDistributors(resp.data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getCollectorFromDistributorId = async (id: string) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    distributorId: id,
-                    status: STATUS.ACTIVE
-                }
-                const resp = await loadCollectors(data, accessToken);
-                if (resp && resp.data) {
-                    setCollectors(resp.data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const resetForm = () => {
-        setFormData({
-            username: "",
-            password: "",
-            fullname: "",
-            email: "",
-            distributorId: "",
-            collectorIds: []
-        });
-
-        setErrors({
-            username: false,
-            password: false,
-            fullname: false,
-            email: false,
-            distributorId: false,
-            collectorIds: false
-        }); 
-    }
-
-
  
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const isEmpty = Object.entries(formData).some(([key, value]) => {
-            if (key === "collectorIds") return value.length === 0;
-            if (typeof value === "string") return value.trim() === "";
-            return !value;
-        });
-        if (isEmpty) {
+        const isInvalid = !formData.username || !formData.password || !formData.fullname || !formData.email || formData.collectorIds.length === 0
+        if (isInvalid) {
             toast.error(t('err_field_required'));
+            return;
         }
-        if (!accessToken || isEmpty) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    username: formData.username,
-                    fullname: formData.fullname,
-                    password: formData.password,
-                    email: formData.email,
-                    distributor_id: formData.distributorId,
-                    collector_ids: formData.collectorIds
-                }
-                const resp = await createNewUser(data, accessToken);
-                if (resp && resp.success) {
+        createMutation.mutate({
+            username: formData.username,
+            fullname: formData.fullname,
+            password: formData.password,
+            email: formData.email,
+            distributor_id: formData.distributorId,
+            collector_ids: formData.collectorIds
+        }, {
+            onSuccess: (resp) => {
+                if (resp?.success) {
                     toast.success(t('success'));
-                    resetForm();
                     router.back();
                 }
-            } catch (err: any) {
+            },
+            onError: (err: any) => {
                 handleApiError(err, t);
             }
         })
     }
-
-    useEffect(() => {
-        dispatch(setActiveTitle(t('add_new_user')));
-        getDistributors();
-    },[])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
@@ -185,7 +127,7 @@ export default function CreateCollector() {
                             <label className="text-sm text-gray-700">
                                 <span className="text-red-500 mr-1">*</span>{t('collector')}
                             </label>
-                           <CustomSelect
+                            <CustomSelect
                                 mode="multiple"
                                 placeholder={t('select_option')}
                                 value={formData.collectorIds || undefined} 
@@ -236,7 +178,7 @@ export default function CreateCollector() {
                     </div>
                 </form>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadDist || isLoadColl || createMutation.isPending} />
         </div>
     );
 }

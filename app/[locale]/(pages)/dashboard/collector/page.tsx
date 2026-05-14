@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
@@ -13,11 +13,9 @@ import { STATUS } from '@/constants';
 import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import CustomSelect from '@/components/CustomSelect';
-import { handleApiError } from '@/utils/errorHandler';
-import { loadDistributors } from '@/services/distributorService';
-import { disableCollector, loadCollectors } from '@/services/collectorService';
 import Modal from '@/components/Modal';
-import { toast } from 'react-toastify';
+import { useCollectorList, useDisableCollector } from '@/hooks/useCollector';
+import { useProviderList } from '@/hooks/useProvider';
 
 export default function Collector() {
     const t = useTranslations();
@@ -26,13 +24,7 @@ export default function Collector() {
     const dispatch = useDispatch();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const accessToken = Cookies.get('accessToken');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [isLoading, startTransition] = useTransition();
-    const [totalItems, setTotalItems] = useState(0);
-    const [distributors, setDistributors] = useState<any[]>([]);
-    const [collectors, setCollectors] = useState<any[]>([]);
+    const accessToken = Cookies.get('accessToken') || "";
     const [selectedCollector, setSelectedCollector] = useState<any>();
     const [openModal, setOpenModal] = useState(false);
 
@@ -41,14 +33,32 @@ export default function Collector() {
         {code: STATUS.DEACTIVE, name: t('deactive')},
     ];
 
-    const [formData, setFormData] = useState({
-        distributorId: "",
-        collectorCode: "",
-        collectorName: "",
+    const defaultParams = {
+        providerId: '',
+        collectorCode: '',
+        collectorName: '',
         status: STATUS.ACTIVE,
         page: 1,
         limit: 10
-    })
+    };
+
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = Number(searchParams.get('limit')) || 10;
+    const status = searchParams.get('status') != null ? Number(searchParams.get('status')) : STATUS.ACTIVE;
+    const params = {
+        providerId: searchParams.get('provider_id') || '',
+        collectorCode: searchParams.get('code') || '',
+        collectorName: searchParams.get('name') || '',
+        status: status,
+        page: page,
+        limit: limit
+    }
+    const [formData, setFormData] = useState(params);
+    const {data: providersRes, isLoading: isLoadProviders, isError: errLoadProviders} = useProviderList(accessToken);
+    const {data: collectorsRes, isLoading: isLoadCollectors, isError: errLoadCollectors} : any = useCollectorList(params, accessToken);
+    const disableMutation = useDisableCollector(accessToken, t);
+    const providers = errLoadProviders ? [] : providersRes?.data;
+    const collectors = errLoadCollectors ? [] : collectorsRes?.data;
 
     const createNew = () => {
         router.push(`/${locale}/dashboard/collector/create-new`)
@@ -63,67 +73,43 @@ export default function Collector() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        const params = new URLSearchParams();
-        params.set('limit', String(formData.limit));
-        params.set('page', '1');
-        params.set('status', String(formData.status));
-        if (formData.distributorId) {
-            params.set('distributor_id', formData.distributorId);
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('status', String(formData.status));
+        if (formData.providerId) {
+            newParams.set('provider_id', formData.providerId);
         }
         if (formData.collectorCode) {
-            params.set('code', formData.collectorCode);
+            newParams.set('code', formData.collectorCode);
         }
         if (formData.collectorName) {
-            params.set('name', formData.collectorName);
+            newParams.set('name', formData.collectorName);
         }
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleRefresh = () => {
-        router.push(pathname);
+        setFormData(defaultParams)
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('status', String(STATUS.ACTIVE));
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handlePageChange = (page: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('page', String(page));
+        const p = new URLSearchParams(searchParams.toString());
+        p.set('page', String(page));
         handleValueChange('page', page);
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${p.toString()}`);
     }
 
     const handleLimitChange = (limit: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('limit', String(limit));
-        params.set('page', '1');
-        router.push(`${pathname}?${params.toString()}`);
-    }
-
-    const getDistributors = async (data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadDistributors(data, accessToken);
-                if (resp && resp.data) {
-                    setDistributors(resp.data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getCollectors = async (data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadCollectors(data, accessToken);
-                if (resp && resp.data) {
-                    setCollectors(resp.data);
-                    setTotalItems(resp.paginate.total);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            } 
-        })
+        const p = new URLSearchParams(searchParams.toString());
+        p.set('limit', String(limit));
+        p.set('page', '1');
+        router.push(`${pathname}?${p.toString()}`);
     }
 
     const handleSelectDisableCollector = (item: any) => {
@@ -131,52 +117,22 @@ export default function Collector() {
         setSelectedCollector(item);
     }
 
-    const updateStateCollector = async () => {
-        startTransition(async () => {
-            try {
-                if (!accessToken) return;
+    const onConfirmDisable = async () => {
+        if (selectedCollector) {
                 const data = {
                     id: selectedCollector.id,
                     code: selectedCollector.code,
                     name: selectedCollector.name,
                     distributor_id: selectedCollector.distributor_id
                 }
-                const resp = await disableCollector(data, accessToken);
-                if (resp && resp.success) {
-                    setOpenModal(false);
-                    toast.success(t('success'));
-                    handleRefresh();
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
+            await disableMutation.mutateAsync(data);
+            setOpenModal(false);
+        }
     }
 
     useEffect(() => {
         dispatch(setActiveTitle(t('collector')));
-        const codeParams = searchParams.get('code') || "";
-        const nameParams = searchParams.get('name') || "";
-        const distributorIdParams = searchParams.get('distributor_id') || "";
-        const statusParams = searchParams.get('status');
-        const limitParams = Number(searchParams.get('limit')) || 10;
-        const pageParams = Number(searchParams.get('page')) || 1;
-
-        const dataFromUrl = {
-            distributorId: distributorIdParams,
-            collectorCode: codeParams,
-            collectorName: nameParams,
-            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : STATUS.ACTIVE,
-            page: pageParams,
-            limit: limitParams
-        };
-
-        setFormData(dataFromUrl);
-        setPageSize(dataFromUrl.limit);
-        setCurrentPage(dataFromUrl.page);
-        getDistributors(dataFromUrl);
-        getCollectors(dataFromUrl);
-    },[searchParams])
+    },[t])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
@@ -195,15 +151,15 @@ export default function Collector() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mb-6">
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm mb-1 text-gray-700 whitespace-nowrap">
-                                    {t('distributor_code')}
+                                    {t('agency_name')}
                                 </label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.distributorId} 
-                                    onChange={(value) => handleValueChange("distributorId", value)}
-                                    options={distributors.map((distributor: any) => ({
-                                        value: distributor.id,
-                                        label: `${distributor.code}_${distributor.name}`,
+                                    value={formData.providerId} 
+                                    onChange={(value) => handleValueChange("providerId", value)}
+                                    options={providers && providers.map((provider: any) => ({
+                                        value: provider.id,
+                                        label: `${provider.code}_${provider.name}`,
                                     }))}
                                 />
                             </div>
@@ -256,6 +212,7 @@ export default function Collector() {
                             <thead>
                                 <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                     <th className="px-4 py-3 border-r border-white text-center w-16">{t('index')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('agency_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('collector_code')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('collector_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('status')}</th>
@@ -263,13 +220,14 @@ export default function Collector() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {collectors.map((collector, index) => (
+                                {collectors && collectors.map((collector: any, index: number) => (
                                     <tr key={collector.id} className="hover:bg-blue-50/30 transition-colors">
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
+                                        <td className="px-4 py-3 text-gray-600">{collector.provider.name}</td>
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{collector.code}</td>
                                         <td className="px-4 py-3 text-gray-700">{collector.name}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                                                 collector.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
                                             }`}>
                                                 {collector.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
@@ -296,9 +254,9 @@ export default function Collector() {
                         </table>
                     </div>
                     <Pagination
-                        currentPage={currentPage}
-                        totalItems={totalItems}
-                        pageSize={pageSize}
+                        currentPage={page}
+                        totalItems={collectorsRes?.paginate.total || 0}
+                        pageSize={limit}
                         onPageChange={(page) => handlePageChange(page)}
                         onPageSizeChange={(limit) => handleLimitChange(limit)}
                     />
@@ -306,11 +264,11 @@ export default function Collector() {
             </div>
             <Modal 
                 isOpen={openModal} 
-                title={t('disable_distributor')} 
-                onConfirm={updateStateCollector} 
+                title={t('disable_collector')} 
+                onConfirm={onConfirmDisable} 
                 onClose={() => setOpenModal(false)} 
             />
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadProviders || isLoadCollectors || disableMutation.isPending} />
         </div>
   );
 }

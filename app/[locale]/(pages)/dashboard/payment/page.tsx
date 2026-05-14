@@ -3,7 +3,7 @@
 import { faSearch, faSync, faTrash, faFileAlt, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -14,15 +14,12 @@ import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { PAYMENT_STATUS, SERVICE_CODE } from '@/constants';
-import { loadPayments, terminatePayment } from '@/services/paymentService';
-import { handleApiError } from '@/utils/errorHandler';
 import dayjs from 'dayjs';
 import InfoItem from '@/components/InfoItem';
 import { formatVND } from '@/utils/common';
-import { loadListOrderByBatchPaymentId } from '@/services/orderService';
-import { toast } from 'react-toastify';
 import Loading from '@/components/Loading';
 import Modal from '@/components/Modal';
+import { useListOrdersInBatchPayment, usePaymentList, useTerminatePaymentMutation } from '@/hooks/usePayment';
 
 export default function Payment() {
     const t = useTranslations();
@@ -31,22 +28,15 @@ export default function Payment() {
     const pathname = usePathname();
     const dispatch = useDispatch();
     const searchParams = useSearchParams();
-    const accessToken = Cookies.get('accessToken');
+    const accessToken = Cookies.get('accessToken') || "";
     const today = dayjs();
     const from = today.subtract(6, "day");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [payments, setPayments] = useState<any[]>([]);
-    const [totalItems, setTotalItems] = useState(0);
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
-    const [isLoading, startTransition] = useTransition();
     const [showModal, setShowModal] = useState(false);
     const [modalTerminate, setModalTerminate] = useState(false);
     const [selectItem, setSelectItem] = useState<any>();
-    const [listOrders, setListOrders] = useState<any>();
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
-    const [subTotalItems, setSubTotalItems] = useState(0);
     const [batchPaymentId, setBatchPaymentId] = useState('');
 
     const status = [
@@ -59,14 +49,38 @@ export default function Payment() {
         {code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd"},
     ]
 
-    const [formData, setFormData] = useState<any>({
+    const defaultParams = {
         paymentCode: "",
-        status: "",
+        status: null,
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
         limit: 10,
         page: 1
-    });
+    }
+
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = Number(searchParams.get('limit')) || 10;
+    const params = {
+        paymentCode: searchParams.get('payment_code') != null ? searchParams.get('payment_code') : "",
+        status: searchParams.get('status') !== null ? Number(searchParams.get('status')) : null,
+        fromDate: searchParams.get('from_date') !== null ? searchParams.get('from_date') : from.format("YYYY-MM-DD"),
+        toDate: searchParams.get('to_date') !== null ? searchParams.get('to_date') : today.format("YYYY-MM-DD"),
+        limit: limit,
+        page: page
+    }
+    const [formData, setFormData] = useState(params);
+    const {data: paymentsRes, isLoading: isLoadPayments, isError: errLoadPayments} = usePaymentList(params, accessToken);
+    const payments = errLoadPayments ? [] : paymentsRes?.data;
+    const terminatePaymentMutation = useTerminatePaymentMutation(accessToken, t);
+    const { data: ordersRes, isLoading: isLoadOrders, isError: errLoadOrders } = useListOrdersInBatchPayment(
+        {
+            batchPaymentId: expandedRow,
+            page: currentSubPage,
+            limit: subPageSize,
+        },
+        accessToken
+    )
+    const listOrders = errLoadOrders ? [] : ordersRes?.data;
 
     const handleValueChange = (nameField: string, value: any) => {
         setFormData((prev: any) => ({
@@ -81,108 +95,65 @@ export default function Payment() {
     }
 
     const toggleRow = (payment: any) => {
-        if (payment.status === PAYMENT_STATUS.RECORDED) {
-            setListOrders([]);
-            if (expandedRow === payment.id) {
-                setExpandedRow(null);
-                return;
-            } else {
-                setExpandedRow(payment.id);
-                getListOrders(payment.id);
-            }
-        }
-        return;
+        if (payment.status !== PAYMENT_STATUS.RECORDED) return;
+        setExpandedRow(prev => {
+            if (prev === payment.id) return null
+            return payment.id;
+        })
     };
 
     const handleRefresh = () => {
-        router.push(pathname);
+        setFormData(defaultParams);
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        const params = new URLSearchParams();
-        params.set('limit', String(formData.limit));
-        params.set('page', '1');
-        params.set('status', String(formData.status));
-        params.set('from_date', String(formData.fromDate));
-        params.set('to_date', String(formData.toDate));
-        if (formData.paymentCode) {
-            params.set('payment_code', formData.paymentCode);
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('from_date', String(formData.fromDate));
+        newParams.set('to_date', String(formData.toDate));
+
+        if (formData.status != null && formData.status != undefined) {
+            newParams.set('status', String(formData.status));
         }
-        router.push(`${pathname}?${params.toString()}`);
+        if (formData.paymentCode) {
+            newParams.set('payment_code', formData.paymentCode);
+        }
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handlePageChange = (page: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('page', String(page));
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.set('page', String(page));
         handleValueChange('page', page);
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleLimitChange = (limit: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('limit', String(limit));
-        params.set('page', '1');
-        router.push(`${pathname}?${params.toString()}`);
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.set('limit', String(limit));
+        newParams.set('page', '1');
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
-    const onTerminatePayment = (id: string) => {
+    const onSelectedTerminatePayment = (id: string) => {
         setBatchPaymentId(id);
         setModalTerminate(!modalTerminate);
     }
 
-    const handleTerminatePayment = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    batch_payment_id: batchPaymentId
-                }
-                const resp = await terminatePayment(data, accessToken);
-                if (resp && resp.success) {
-                    toast.success(t('success'));
-                    handleRefresh();
-                    setModalTerminate(false);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
+    const onConfirmTerminatePayment = async () => {
+        if (batchPaymentId) {
+            const data = {
+                batch_payment_id: batchPaymentId
             }
-        })
-    }
-
-    const getListOrders = async (batchPaymentId: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    page: currentSubPage,
-                    limit: subPageSize,
-                    batchPaymentId: batchPaymentId
-                }
-                const resp = await loadListOrderByBatchPaymentId(data, accessToken);
-                if (resp && resp.data) {
-                    setListOrders(resp.data);
-                    setSubTotalItems(resp.paginate.total);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getPayments = async(data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadPayments(data, accessToken);
-                if (resp && resp.data) {
-                    setPayments(resp.data);
-                    setTotalItems(resp.paginate.total);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
+            await terminatePaymentMutation.mutateAsync(data);
+            setModalTerminate(false);
+        }
     }
 
     const getServiceNameFromCode = (serviceCode: number) => {
@@ -190,29 +161,17 @@ export default function Payment() {
         return find?.acronym.toUpperCase();
     }
 
+    const getPaymentStatusBadge = (status: string) => {
+        const statusMap: Record<string, { bg: string; label: string }> = {
+            [PAYMENT_STATUS.PAID]:   { bg: 'bg-blue-500', label: t('paid') },
+            [PAYMENT_STATUS.CANCEL]: { bg: 'bg-red-500',  label: t('cancel') },
+        }
+        return statusMap[status] ?? { bg: 'bg-amber-400', label: t('pending_payment') }
+    }
+
     useEffect(() => {
         dispatch(setActiveTitle(t('payment_request')));
-        const fromDateParam = searchParams.get('from_date') || today.subtract(6, "days").format("YYYY-MM-DD");
-        const toDateParam = searchParams.get('to_date') || today.format("YYYY-MM-DD");
-        const statusParam = searchParams.get('status');
-        const limitParam = Number(searchParams.get('limit')) || 10;
-        const pageParam = Number(searchParams.get('page')) || 1;
-        const paymentCodeParam = searchParams.get('payment_code');
-    
-        const dataFromUrl = {
-            paymentCode: paymentCodeParam,
-            fromDate: fromDateParam,
-            toDate: toDateParam,
-            status: (statusParam !== null && statusParam !== "") ? Number(statusParam) : "",
-            page: pageParam,
-            limit: limitParam
-        };
-    
-        setFormData(dataFromUrl);
-        setPageSize(dataFromUrl.limit);
-        setCurrentPage(dataFromUrl.page);
-        getPayments(dataFromUrl);
-    },[searchParams])
+    },[t])
 
     return (
         <div className="flex flex-col gap-3 text-black">
@@ -272,7 +231,7 @@ export default function Payment() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_payment_request')}</h1>
-                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{payments.length}</span>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{payments && payments.length}</span>
                         </div>
                         
                         <div className="flex gap-2 mt-2 md:mt-0">
@@ -302,7 +261,7 @@ export default function Payment() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {payments.map((payment) => (
+                                    {payments && payments.map((payment: any) => (
                                         <React.Fragment key={payment.id}>
                                             <tr 
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
@@ -319,10 +278,14 @@ export default function Payment() {
                                                 <td className="px-4 py-3 text-gray-600">{payment.user.fullname}</td>
                                                 <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(payment.amount)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`${payment.status == PAYMENT_STATUS.PAID ? "bg-blue-500" : payment.status == PAYMENT_STATUS.CANCEL ? "bg-red-500" : "bg-amber-400"} 
-                                                    px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
-                                                        {payment.status == PAYMENT_STATUS.PAID ? t('paid') : payment.status == PAYMENT_STATUS.CANCEL ? t('cancel'): t('pending_payment')}
-                                                    </span>
+                                                    {(() => {
+                                                        const { bg, label } = getPaymentStatusBadge(payment.status)
+                                                        return (
+                                                            <span className={`${bg} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
+                                                                {label}
+                                                            </span>
+                                                        )
+                                                    })()}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.created_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
@@ -337,7 +300,7 @@ export default function Payment() {
                                                             </button>
                                                             {payment.status != PAYMENT_STATUS.PAID && 
                                                                 <button
-                                                                    onClick={() => onTerminatePayment(payment.id)} 
+                                                                    onClick={() => onSelectedTerminatePayment(payment.id)} 
                                                                     className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
                                                                 </button>
                                                             }
@@ -384,7 +347,7 @@ export default function Payment() {
                                                         <td colSpan={8} className="px-4 py-2 border-b border-orange-100">
                                                             <Pagination
                                                                 currentPage={currentSubPage}
-                                                                totalItems={subTotalItems}
+                                                                totalItems={ordersRes?.paginate.total || 0}
                                                                 pageSize={subPageSize}
                                                                 onPageChange={(page) => setCurrentSubPage(page)}
                                                                 onPageSizeChange={(limit) => setSubPageSize(limit)}
@@ -400,9 +363,9 @@ export default function Payment() {
                         </div>
                         <div className="mt-2">
                             <Pagination
-                                currentPage={currentPage}
-                                totalItems={totalItems}
-                                pageSize={pageSize}
+                                currentPage={page}
+                                totalItems={paymentsRes?.paginate.total || 0}
+                                pageSize={limit}
                                 onPageChange={(page) => handlePageChange(page)}
                                 onPageSizeChange={(limit) => handleLimitChange(limit)}
                             />
@@ -477,10 +440,10 @@ export default function Payment() {
             <Modal 
                 isOpen={modalTerminate} 
                 title={t('terminate_order')} 
-                onConfirm={handleTerminatePayment} 
+                onConfirm={onConfirmTerminatePayment} 
                 onClose={() => setModalTerminate(false)} 
             />
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending} />
         </div>
     )
 }

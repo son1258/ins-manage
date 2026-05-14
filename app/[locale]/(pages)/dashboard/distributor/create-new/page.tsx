@@ -3,35 +3,53 @@
 import InputGroup from "@/components/InputGroup";
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import Loading from "@/components/Loading";
-import { handleApiError } from "@/utils/errorHandler";
-import { createDistributor } from "@/services/distributorService";
 import CustomSelect from "@/components/CustomSelect";
-import { loadProviders } from "@/services/providerService";
+import { useProviderList } from "@/hooks/useProvider";
+import { useCreateDistributorMutation } from "@/hooks/useDistributor";
+import { useRouter } from "next/navigation";
+import { useProductList } from "@/hooks/useCommonHook";
 
 export default function CreateNewDistributor() {
     const t = useTranslations();
     const dispatch = useDispatch();
-    const accessToken = Cookies.get('accessToken');
-    const [isLoading, startTransition] = useTransition();
-    const [providers, setProviders] = useState<any[]>([]);
-
+    const router = useRouter();
+    const accessToken = Cookies.get('accessToken') || "";
     const [formData, setFormData] = useState({
         providerId: "",
         distributorCode: "",
-        distributorName: ""
+        distributorName: "",
+        productIds: [],
+        catalogIds: []
     });
 
     const [errors, setErrors] = useState<any>({
         distributorCode: false,
         distributorName: false,
-    })
+    });
+
+    const {data: productsRes, isLoading: isLoadProducts, isError: errLoadProducts} = useProductList(accessToken);
+    const {data: providersResp, isLoading: isLoadProviders, isError: errLoadProvider} = useProviderList(accessToken);
+    const products = errLoadProducts ? [] : productsRes?.data;
+    const providers = errLoadProvider ? [] : providersResp?.data;
+    const createDistributor = useCreateDistributorMutation(accessToken);
 
     const handleValueChange = (nameField: string, value: any) => {
+        if (nameField === "productIds") {
+            const selectedProducts = products.filter((item: any) =>
+                value.includes(item.id)
+            );
+            setFormData(prev => ({
+                ...prev,
+                productIds: value,
+                catalogIds: selectedProducts.map((item: any) => item.category?.id).filter(Boolean)
+            }));
+        }
+
         setFormData(prev => ({
             ...prev,
             [nameField]: value
@@ -43,58 +61,32 @@ export default function CreateNewDistributor() {
         }));
     }
 
-    const getProviders = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadProviders(accessToken);
-                if (resp && resp.data) {
-                    setProviders(resp.data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const resetForm = () => {
-        setFormData({
-            providerId: "",
-            distributorCode: "",
-            distributorName: ""
-        });
-
-        setErrors({
-            distributorCode: false,
-            distributorName: false,
-        }); 
-    }
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        startTransition(async () => {
-            try {
-                const data = {
-                    provider_id: formData.providerId,
-                    code: formData.distributorCode,
-                    name: formData.distributorName
-                }
-                if (!accessToken) return;
-                const resp = await createDistributor(data, accessToken);
-                if (resp && resp.success) {
+        const isInvalid = !formData.providerId || !formData.distributorCode || !formData.distributorName || formData.productIds.length === 0 || formData.catalogIds.length === 0;
+        if (isInvalid) {
+            toast.error(t('err_field_required'));
+            return;
+        }
+        createDistributor.mutate({
+            provider_id: formData.providerId,
+            code: formData.distributorCode,
+            name: formData.distributorName,
+            list_categories: formData.catalogIds,
+            list_products: formData.productIds
+        }, {
+            onSuccess: (resp) => {
+                if (resp?.success) {
                     toast.success(t('success'));
-                    resetForm();
+                    router.back();
                 }
-            } catch (err: any) {
-                handleApiError(err, t);
-            }
+            },
         })
     }
 
     useEffect(() => {
         dispatch(setActiveTitle(t('add_distributor')));
-        getProviders();
-    },[])
+    },[t])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
@@ -111,7 +103,7 @@ export default function CreateNewDistributor() {
                                 placeholder={t('select_option')}
                                 value={formData.providerId || undefined} 
                                 onChange={(value) => handleValueChange("providerId", value)}
-                                options={providers.map((provider: any) => ({
+                                options={providers && providers.map((provider: any) => ({
                                     value: provider.id,
                                     label: `${provider.name} (${provider.code})`,
                                 }))}
@@ -131,6 +123,19 @@ export default function CreateNewDistributor() {
                             isError={errors.distributorName}
                             required 
                         />
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('type')}<span className="text-red-500 mr-1">*</span></label>
+                            <CustomSelect
+                                mode="multiple"
+                                placeholder={t('select_option')}
+                                value={formData.productIds || undefined} 
+                                onChange={(value) => handleValueChange("productIds", value)}
+                                options={products && products.map((collector: any) => ({
+                                    value: collector.id,
+                                    label: collector.name,
+                                }))}
+                            />
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-3">
@@ -142,7 +147,7 @@ export default function CreateNewDistributor() {
                     </div>  
                 </form>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadProducts || isLoadProviders || createDistributor.isPending} />
         </div>
     )
 }

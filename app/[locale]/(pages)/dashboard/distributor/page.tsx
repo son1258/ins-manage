@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
@@ -10,14 +10,12 @@ import Pagination from '@/components/Pagination';
 import Cookies from 'js-cookie';
 import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { STATUS } from '@/constants';
+import { PRODUCT_CODE, STATUS } from '@/constants';
 import Loading from '@/components/Loading';
-import { disableDistributor, loadDistributors } from '@/services/distributorService';
-import { handleApiError } from '@/utils/errorHandler';
 import Modal from '@/components/Modal';
-import { toast } from 'react-toastify';
 import CustomSelect from '@/components/CustomSelect';
-import { loadProviders } from '@/services/providerService';
+import { useProviderList } from '@/hooks/useProvider';
+import { useDisableDistributor, useDistributorList } from '@/hooks/useDistributor';
 
 export default function DistributorManagement() {
     const t = useTranslations();
@@ -26,29 +24,41 @@ export default function DistributorManagement() {
     const dispatch = useDispatch();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const accessToken = Cookies.get('accessToken');
-    const [totalItems, setTotalItems] = useState(0);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [isLoading, startTransition] = useTransition();
-    const [pageSize, setPageSize] = useState(10);
-    const [providers, setProviders] = useState<any[]>([]);
-    const [distributors, setDistributors] = useState<any[]>([]);
+    const accessToken = Cookies.get('accessToken') || "";
     const [openModal, setOpenModal] = useState(false);
-    const [selectedId, setSelectedId] = useState('');
+    const [selectedDistributorId, setSelectedDistributorId] = useState<any>();
 
     const listStatus = [
         {code: STATUS.ACTIVE, name: t('active')},
         {code: STATUS.DEACTIVE, name: t('deactive')},
     ]
 
-    const [formData, setFormData] = useState({
+    const defaultParams = {
         providerCode: "",
         distributorCode: "",
         distributorName: "",
         status: STATUS.ACTIVE,
         limit: 10,
         page: 1
-    })
+    }
+
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = Number(searchParams.get('limit')) || 10;
+    const status = searchParams.get('status') != null ? Number(searchParams.get('status')) : STATUS.ACTIVE;
+    const params = {
+        providerCode: searchParams.get('provider_code') || "",
+        distributorCode: searchParams.get('distributor_code') || "",
+        distributorName: searchParams.get('distributor_name') || "",
+        status: status,
+        page: page,
+        limit: limit
+    }
+    const [formData, setFormData] = useState(params);
+    const {data: providersResp, isLoading: isLoadProviders, isError: errLoadProviders} = useProviderList(accessToken);
+    const providers = errLoadProviders ? [] : providersResp?.data;
+    const {data: distributorsResp, isLoading: isLoadDistributors, isError: errLoadDistributors} = useDistributorList(params, accessToken);
+    const distributors = errLoadDistributors ? [] : distributorsResp?.data;
+    const disableMutation = useDisableDistributor(accessToken, t);
 
     const createNew = () => {
         router.push(`/${locale}/dashboard/distributor/create-new`);
@@ -80,36 +90,12 @@ export default function DistributorManagement() {
     }
 
     const handleRefresh = () => {
-        router.push(pathname);
-    } 
-
-    const getProviders = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadProviders(accessToken);
-                if (resp && resp.data) {
-                    setProviders(resp.data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getDistributors = async (data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadDistributors(data, accessToken);
-                if (resp && resp.data) {
-                    setDistributors(resp.data);
-                    setTotalItems(resp.paginate.total);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
+        setFormData(defaultParams)
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('status', String(STATUS.ACTIVE));
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handlePageChange = (page: number) => {
@@ -126,60 +112,28 @@ export default function DistributorManagement() {
         router.push(`${pathname}?${params.toString()}`);
     }
 
-    const updateStateDistributor = async () => {
-        if (!accessToken || !selectedId) return;
-        startTransition(async () => {
-            try {
-                const resp = await disableDistributor(selectedId, accessToken);
-                if (resp && resp.success) {
-                    setOpenModal(false);
-                    toast.success(t('success'));
-                    setSelectedId('');
-                    await getDistributors(formData);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
+    const onConfirmDisable = async () => {
+        if (selectedDistributorId) {
+            await disableMutation.mutateAsync(selectedDistributorId);
+            setOpenModal(false);
+        }
     }
 
     const handleSelectDisableDistributor = (id: string) => {
         setOpenModal(!openModal);
-        setSelectedId(id);
+        setSelectedDistributorId(id);
     } 
     
     const findProviderName = (providerId: string) => {
-        const find = providers.find(item => item.id == providerId);
-        return find?.name;
+        if (providers) {
+            const find = providers.find((item: any) => item.id == providerId);
+            return find?.name;
+        }
     }
 
     useEffect(() => {
-        getProviders();
-    },[])
-
-    useEffect(() => {
         dispatch(setActiveTitle(t('distributor')));
-        const providerCodeParam = searchParams.get('provider_code') || "";
-        const distributorCodeParam = searchParams.get('distributor_code') || "";
-        const nameParam = searchParams.get('distributor_name') || "";
-        const statusParam = searchParams.get('status');
-        const limitParam = Number(searchParams.get('limit')) || 10;
-        const pageParam = Number(searchParams.get('page')) || 1;
-
-        const dataFromUrl = {
-            providerCode: providerCodeParam,
-            distributorCode: distributorCodeParam,
-            distributorName: nameParam,
-            status: (statusParam != "" && statusParam != null) ? Number(statusParam) : STATUS.ACTIVE,
-            page: pageParam,
-            limit: limitParam
-        };
-
-        setFormData(dataFromUrl);
-        setPageSize(dataFromUrl.limit);
-        setCurrentPage(dataFromUrl.page);
-        getDistributors(dataFromUrl);
-    },[searchParams])
+    },[t])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
@@ -204,7 +158,7 @@ export default function DistributorManagement() {
                                     placeholder={t('select_option')}
                                     value={formData.providerCode || undefined} 
                                     onChange={(value) => handleValueChange("providerCode", value)}
-                                    options={providers.map((provider: any) => ({
+                                    options={providers && providers.map((provider: any) => ({
                                         value: provider.code,
                                         label: `${provider.name} (${provider.code})`,
                                     }))}
@@ -262,22 +216,34 @@ export default function DistributorManagement() {
                             <thead>
                                 <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                     <th className="px-4 py-3 border-r border-white text-center w-16">{t('index')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('agency_name')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('distributor_code')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('distributor_name')}</th>
-                                    <th className="px-4 py-3 border-r border-white">{t('agency_name')}</th>
+                                    <th className="px-4 py-3 border-r border-white">{t('type')}</th>
                                     <th className="px-4 py-3 border-r border-white">{t('status')}</th>
                                     <th className="px-4 py-3 text-center">{t('action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {distributors.map((item, index) => (
+                                {distributors && distributors.map((item: any, index: number) => (
                                     <tr key={item.code} className="hover:bg-blue-50/30 transition-colors">
                                         <td className="px-4 py-3 text-center text-gray-600">{index + 1}</td>
+                                        <td className="px-4 py-3 text-gray-700">{findProviderName(item.provider_id)}</td>
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{item.code}</td>
                                         <td className="px-4 py-3 text-gray-700">{item.name}</td>
-                                        <td className="px-4 py-3 text-gray-700">{findProviderName(item.provider_id)}</td>
+                                        <td className="px-4 py-3 text-gray-700">
+                                            <div className="flex items-center gap-2 text-xs">
+                                                {item.products.map((product: any) => (
+                                                    <span 
+                                                        className={`text-white px-2 py-1 rounded-lg ${product.code === PRODUCT_CODE.BHXH ? 'bg-sky-500' : 'bg-rose-500'}`}
+                                                        key={product.id}>
+                                                        {product.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                                                 item.status === STATUS.ACTIVE
                                                 ? 'bg-teal-400 text-white' 
                                                 : 'bg-red-500 text-white'
@@ -305,9 +271,9 @@ export default function DistributorManagement() {
                         </table>
                     </div>
                     <Pagination
-                        currentPage={currentPage}
-                        totalItems={totalItems}
-                        pageSize={pageSize}
+                        currentPage={page}
+                        totalItems={distributorsResp?.paginate.total || 0}
+                        pageSize={limit}
                         onPageChange={(page) => handlePageChange(page)}
                         onPageSizeChange={(limit) => handleLimitChange(limit)}
                     />
@@ -316,10 +282,10 @@ export default function DistributorManagement() {
             <Modal 
                 isOpen={openModal} 
                 title={t('disable_distributor')} 
-                onConfirm={updateStateDistributor} 
+                onConfirm={onConfirmDisable} 
                 onClose={() => setOpenModal(false)} 
             />
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadProviders || isLoadDistributors} />
         </div>
   );
 }

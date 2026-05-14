@@ -11,3 +11,9 @@ export const loadEthinicities = (token: string) => {
     const resp = callApi(url, 'GET', {}, 'v1', token);
     return resp; 
 }
+
+export const loadProducts = (token: string) => {
+    const url = 'products';
+    const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp; 
+}

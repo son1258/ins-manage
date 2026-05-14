@@ -52,11 +52,16 @@ export const GENDER = {
 }
 
 export const NATIONAL = {
-    VN: 'vn'
+    VN: "vn"
 }
 
 export const BIRTHDAY_VALUE = {
     FULL: 0,
     MONTH_AND_YEAR: 1,
     ONLY_YEAR: 2
+}
+
+export const PRODUCT_CODE = {
+    BHXH: "BHXH602",
+    BHYT: "BHYT603"
 }

@@ -3,25 +3,22 @@
 import CustomSelect from '@/components/CustomSelect';
 import InputGroup from '@/components/InputGroup';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
-import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Cookies from 'js-cookie';
 import Loading from '@/components/Loading';
-import { loadDistributors } from '@/services/distributorService';
-import { handleApiError } from '@/utils/errorHandler';
 import { toast } from 'react-toastify';
-import { createCollector } from '@/services/collectorService';
 import { useRouter } from 'next/navigation';
 import { STATUS } from '@/constants';
+import { useDistributorList } from '@/hooks/useDistributor';
+import { useCreateCollectorMutation } from '@/hooks/useCollector';
 
 export default function CreateCollector() {
     const t = useTranslations();
     const router = useRouter();
     const dispatch = useDispatch();
-    const accessToken = Cookies.get('accessToken');
-    const [isLoading, startTransition] = useTransition();
-    const [distributors, setDistributors] = useState<any[]>([]);
+    const accessToken = Cookies.get('accessToken') || "";
 
     const [formData, setFormData] = useState({
         distributorId: "",
@@ -35,6 +32,10 @@ export default function CreateCollector() {
         name: false,
     })
 
+    const {data: distributorsResp, isLoading, isError} = useDistributorList({status: STATUS.ACTIVE}, accessToken);
+    const distributors = isError ? [] : (distributorsResp?.data || []);
+    const createMutation = useCreateCollectorMutation(accessToken);
+
     const handleValueChange = (nameField: string, value: any) => {
         setFormData(prev => ({
             ...prev,
@@ -47,45 +48,30 @@ export default function CreateCollector() {
         }));
     }
 
-    const getDistributors = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadDistributors({status: STATUS.ACTIVE}, accessToken);
-                if (resp && resp.data) {
-                    setDistributors(resp.data);
-                }
-            } catch(err) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        startTransition(async () => {
-            try {
-                const data = {
-                    distributor_id: formData.distributorId,
-                    code: formData.code,
-                    name: formData.name
-                }
-                if (!accessToken) return;
-                const resp = await createCollector(data, accessToken);
-                if (resp && resp.success) {
+        const isInvalid = !formData.distributorId || !formData.code || !formData.name;
+        if (isInvalid) {
+            toast.error(t('err_field_required'));
+            return;
+        }
+        createMutation.mutate({
+            distributor_id: formData.distributorId,
+            code: formData.code,
+            name: formData.name
+        }, {
+            onSuccess: (resp) => {
+                if (resp?.success) {
                     toast.success(t('success'));
                     router.back();
                 }
-            } catch (err) {
-                handleApiError(err, t);
-            }
+            },
         })
     }
 
     useEffect(() => {
         dispatch(setActiveTitle(t('add_collector')));
-        getDistributors();
-    },[])
+    },[t])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">

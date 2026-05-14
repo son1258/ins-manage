@@ -6,7 +6,8 @@ const initialState: PaymentProps = {
     selectedItems:[],
     excludedItems: [],
     totalAmount: 0,
-    isPaymentAllDate: false
+    isPaymentAllDate: false,
+    isSynced: false
 }
 
 const paymentSlice = createSlice({
@@ -33,6 +34,10 @@ const paymentSlice = createSlice({
             state.totalAmount = action.payload
         },
 
+        setIsSynced: (state, action: PayloadAction<boolean>) => {
+            state.isSynced = action.payload
+        },
+
         resetPayment: (state) => {
             state.selectedItems = [];
             state.totalAmount = 0;
@@ -46,6 +51,7 @@ export const {
     setSelectedItems, 
     setExcludedItems, 
     setTotalAmount, 
-    resetPayment
+    resetPayment,
+    setIsSynced
 } = paymentSlice.actions;
 export default paymentSlice.reducer;

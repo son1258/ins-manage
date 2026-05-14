@@ -49,7 +49,7 @@ export default function CustomSelect({
             options={options}
             placeholder={placeholder}
             disabled={disabled}
-            className={`h-8 ${className}`}
+            className={`custom-multi-select h-8 ${className}`}
         />
     </ConfigProvider>
   );

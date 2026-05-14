@@ -84,3 +84,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     color: rgba(0, 0, 0, 0.88) !important;
     cursor: default;
 }
+
+.custom-multi-select .ant-select-selector {
+    max-height: 32px;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.custom-multi-select .ant-select-selector::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}

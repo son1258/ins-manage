@@ -10,7 +10,8 @@ import {
     faBuilding,
     faUserTie,
     faCashRegister,
-    faUser
+    faUser,
+    faMoneyBillWave
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocale, useTranslations } from 'next-intl';
 import Cookies from 'js-cookie';
@@ -57,9 +58,9 @@ export default function SideBar() {
         {
             category: t("ctg_manager").toUpperCase(),
             items: [
-                { icon: faBuilding, label: t('distributor'), link: "distributor", allowedRoles: ['admin', 'user'] },
-                { icon: faCashRegister, label: t('collector'), link: "collector", allowedRoles: ['admin', 'user'] },
-                { icon: faUser, label: t('user'), link: "user", allowedRoles: ['admin', 'user'] },
+                { icon: faBuilding, label: t('distributor'), link: "distributor", allowedRoles: ['admin'] },
+                { icon: faCashRegister, label: t('collector'), link: "collector", allowedRoles: ['admin'] },
+                { icon: faUser, label: t('user'), link: "user", allowedRoles: ['admin'] },
             ]
         },
         {
@@ -78,7 +79,7 @@ export default function SideBar() {
 
     useEffect(() => {
         setMount(true);
-        const role = Cookies.get('userRole') || 'admin';
+        const role = Cookies.get('userRole') || 'user';
         setUserRole(role);
     },[])
 
@@ -100,6 +101,7 @@ export default function SideBar() {
     const handleLogout = () => {
         Cookies.remove("accessToken", { path: '/' });
         Cookies.remove("userRole", { path: '/'});
+        Cookies.remove("username");
         window.location.href = `/${locale}/login`;
     };
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
 import { useTranslations } from 'next-intl';
@@ -10,14 +10,14 @@ import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import Cookies from 'js-cookie';
 import { STATUS } from '@/constants';
 import { handleApiError } from '@/utils/errorHandler';
-import { loadUserById, updateUser } from '@/services/userService';
 import Loading from '@/components/Loading';
 import DatePickerCustom from '@/components/DatePicker';
-import { loadCollectors } from '@/services/collectorService';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { useUpdateUserMutation, useUserDetail } from '@/hooks/useUser';
+import { useCollectorList } from '@/hooks/useCollector';
 
 export default function EditCollector() {
     const t = useTranslations();
@@ -25,12 +25,9 @@ export default function EditCollector() {
     const dispatch = useDispatch();
     const router = useRouter();
     const acceptedBirthday = dayjs().subtract(18, 'year').format("YYYY-MM-DD");
-    const accessToken = Cookies.get('accessToken');
+    const accessToken = Cookies.get('accessToken') || "";
     const role = Cookies.get('userRole');
-    const [collectors, setCollectors] = useState<any>();
-    const [isLoading, startTransition] = useTransition();
-    const [isMounted, setIsMounted] = useState(false);
-
+       const [isMounted, setIsMounted] = useState(false);
     const listStatus = [
         { code: STATUS.ACTIVE, name: t('active') },
         { code: STATUS.DEACTIVE, name: t('deactive') },
@@ -51,70 +48,29 @@ export default function EditCollector() {
         collectorIds: []
     });
 
+    const {data: userRes, isLoading: isUserLoading} = useUserDetail(params.id, accessToken)
+    const {data: collectorsRes, isLoading: isCollectorsLoading} : any = useCollectorList(
+        {status: STATUS.ACTIVE, distributorId: formData.distributor.id},
+        accessToken,
+        { enabled: !!accessToken && !!formData.distributor.id }
+    )
+    const updateUser = useUpdateUserMutation(accessToken)
+    const userDetail = userRes?.data;
     const handleValueChange = (nameField: string, value: any) => {
         setFormData((prev: any) => ({
             ...prev,
             [nameField]: value
         }));
-    };
+    }
+
+    const standardCollectors = collectorsRes?.data?.map((item: any) => ({
+        label: item.name,
+        value: item.id
+    }))
 
     const checkAge = (date: any) => {
         const maxDate = dayjs().subtract(18, 'year').format("YYYY-MM-DD");
         return date > maxDate;
-    };
-
-    const getUserById = async (id: string) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadUserById(id, accessToken);
-                if (resp && resp.data) {
-                    const data = resp.data;
-                    const listCollectors = data.collectors;
-                    const collectorIds = listCollectors.map((item:any) => item.id);
-                    const getDataUser = {
-                        userId: data.id,
-                        fullname: data.fullname || "",
-                        phone: data.phone || "",
-                        nic: data.nic || "" ,
-                        address: data.address || "",
-                        email: data.email || "",
-                        birthday: data.birthday || "",
-                        status: data.status,
-                        username: data.username || "",
-                        avatar: data.avatar || "",
-                        distributor: data.distributor || {},
-                        collectorIds: collectorIds
-                    }
-                    setFormData(getDataUser);
-                    getCollectorFromDistributorId(getDataUser.distributor.id);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getCollectorFromDistributorId = async (id: string) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    distributorId: id,
-                    status: STATUS.ACTIVE
-                }
-                const resp = await loadCollectors(data, accessToken);
-                if (resp && resp.data) {
-                    const standardData = resp.data.map((item: any) => ({
-                        label: item.name,
-                        value: item.id
-                    }))
-                    setCollectors(standardData);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -124,38 +80,55 @@ export default function EditCollector() {
             toast.error(t('err_birthday'));
             return;
         }
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const dataUpdateUser = {
-                    id: formData.userId,
-                    fullname: formData.fullname,
-                    phone: formData.phone,
-                    nic: formData.nic,
-                    address: formData.address,
-                    email: formData.email,
-                    birthday: formData.birthday,
-                    status: formData.status,
-                    avatar: formData.avatar,
-                    collector_ids: formData.collectorIds
-                }
-
-                const resp = await updateUser(dataUpdateUser, accessToken);
-                if (resp && resp.data) {
+        updateUser.mutate(
+            {
+                id: formData.userId,
+                fullname: formData.fullname,
+                phone: formData.phone,
+                nic: formData.nic,
+                address: formData.address,
+                email: formData.email,
+                birthday: formData.birthday,
+                status: formData.status,
+                avatar: formData.avatar,
+                collector_ids: formData.collectorIds
+            }, 
+            {
+                onSuccess: () => {
                     toast.success(t('success'));
                     router.back();
+                },
+                onError: (err: any) => {
+                    handleApiError(err, t)
                 }
-            } catch(err: any) {
-                handleApiError(err, t);
             }
-        })
+        )
     }
+
+    useEffect(() => {
+        if (userDetail) {
+            setFormData({
+                userId: userDetail.id,
+                fullname: userDetail.fullname || "",
+                phone: userDetail.phone || "",
+                nic: userDetail.nic || "" ,
+                address: userDetail.address || "",
+                email: userDetail.email || "",
+                birthday: userDetail.birthday || "",
+                status: userDetail.status,
+                username: userDetail.username || "",
+                avatar: userDetail.avatar || "",
+                distributor: userDetail.distributor || {},
+                collectorIds: userDetail.collectors?.map((collector: any) => collector.id) || []
+            })
+
+        }
+    },[userDetail])
 
     useEffect(() => {
         setIsMounted(true);
         dispatch(setActiveTitle(t('update_user')));
-        getUserById(params.id);
-    }, [params.id]);
+    }, [t])
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 md:p-8">
@@ -204,7 +177,7 @@ export default function EditCollector() {
                                             placeholder={t('select_option')}
                                             value={formData.collectorIds}
                                             onChange={(val) => handleValueChange("collectorIds", val)}
-                                            options={collectors}
+                                            options={standardCollectors || []}
                                         />
                                     </div>
                                 </div>
@@ -283,7 +256,7 @@ export default function EditCollector() {
                     </form>
                 </div>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isUserLoading || isCollectorsLoading || updateUser.isPending} />
         </div>
     );
 }

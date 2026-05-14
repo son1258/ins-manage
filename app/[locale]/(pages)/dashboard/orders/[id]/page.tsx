@@ -3,12 +3,11 @@
 import FormSection from "@/components/FormSection";
 import InputGroup from "@/components/InputGroup";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import { useParams } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
-import { handleApiError } from "@/utils/errorHandler";
 import {
   BIRTHDAY_VALUE,
   GENDER,
@@ -20,20 +19,23 @@ import { formatVND } from "@/utils/common";
 import DatePickerCustom from "@/components/DatePicker";
 import Loading from "@/components/Loading";
 import dayjs from "dayjs";
-import { loadEthinicities, loadProvinces } from "@/services/commonService";
-import { loadOrderById } from "@/services/orderService";
+import { useEthinicityList, useProvinceList } from "@/hooks/useCommonHook";
+import { useOrderDetail } from "@/hooks/useOrder";
 
 export default function OrderDetail() {
 	const t = useTranslations();
 	const params: any = useParams();
 	const dispatch = useDispatch();
-	const [isLoading, startTransition] = useTransition();
-	const accessToken = Cookies.get("accessToken");
+	const accessToken = Cookies.get("accessToken") || "";
 	const [isBHXH, setIsBHXH] = useState(false);
-	const [provinces, setProvinces] = useState<any>(null);
-	const [ethinicities, setEthinicities] = useState<any>(null);
 	const [family, setFamily] = useState<any>(null);
-	const [order, setOrder] = useState<any>(null);
+
+	const {data: provincesRes, isLoading: isLoadProvinces, isError: errLoadProvinces} = useProvinceList(accessToken);
+	const {data: ethinicitiesRes, isLoading: isLoadEthinicities, isError: errLoadEthinicities} = useEthinicityList(accessToken);
+	const {data: orderDetailRes, isLoading: isLoadOrderDetail, isError: errLoadOrderDetail} = useOrderDetail(params.id, accessToken);
+	const provinces = errLoadProvinces ? [] : provincesRes?.data;
+	const ethinicities = errLoadEthinicities ? [] : ethinicitiesRes?.data;
+	const order = errLoadOrderDetail ? [] : orderDetailRes?.data;
 
 	const getNameProvince = (provinceCode: string) => {
 		const result = provinces.find((province: any) => province.code == provinceCode);
@@ -41,52 +43,10 @@ export default function OrderDetail() {
 	};
 
 	const getNameEthinicity = (ethinicityCode: string) => {
-		const result = ethinicities.find((ethinicity: any) => ethinicity.code == ethinicityCode);
-		return result ? result.name : "";
-	};
-
-	const getOrderDetail = async (orderId: string) => {
-		if (!accessToken) return;
-		startTransition(async() => {
-			try {
-				const resp = await loadOrderById(orderId, accessToken);
-				if (resp && resp.success) {
-					setOrder(resp.data);
-					setIsBHXH(resp.data.service_code == SERVICE_CODE.BHXH);
-					setFamily(resp.data.data.tk1_ts.noi_dung[0].ho_gia_dinh.thanh_vien);
-				}
-			} catch (err: any) {
-				handleApiError(err, t);
-			}
-		})
-	};
-
-	const getProvinces = async () => {
-		if (!accessToken) return;
-		startTransition(async () => {
-			try {
-				const resp = await loadProvinces(accessToken);
-				if (resp && resp.success) {
-					setProvinces(resp.data);
-				}
-			} catch (err: any) {
-				handleApiError(err, t);
-			}
-		})
-	};
-
-	const getEthinicities = async () => {
-		if (!accessToken) return;
-		startTransition(async() => {
-			try {
-				const resp = await loadEthinicities(accessToken);
-				if (resp && resp.success) {
-					setEthinicities(resp.data);
-				}
-			} catch (err: any) {
-				handleApiError(err, t);
-			}
-		})
+		if (ethinicities) {
+			const result = ethinicities.find((ethinicity: any) => ethinicity.code == ethinicityCode);
+			return result ? result.name : "";
+		}
 	};
 
 	const calculateMonth = (date: any, range: number) => {
@@ -96,18 +56,14 @@ export default function OrderDetail() {
 
 	useEffect(() => {
 		dispatch(setActiveTitle(t("order_detail")));
-		const initData = async () => {
-			await getProvinces();
-			await getEthinicities();
-		};
-
-		initData();
-	}, []);
+	}, [t]);
 
 	useEffect(() => {
-		if (!provinces || !ethinicities) return;
-		getOrderDetail(params.id);
-	}, [provinces, ethinicities, params.id]);
+		if (order) {
+			setIsBHXH(order.service_code == SERVICE_CODE.BHXH);
+			setFamily(order.data?.tk1_ts?.noi_dung[0]?.ho_gia_dinh?.thanh_vien);
+		}
+	}, [order]);
 
 	return (
 		<div className="min-h-screen font-sans text-gray-800 flex flex-col gap-4 ">
@@ -308,8 +264,8 @@ export default function OrderDetail() {
 					label={t("number_of_month")}
 					value={
 					isBHXH
-						? order.data.d05_ts.noi_dung[0].sothang
-						: order.data.d03_ts.noi_dung[0].so_thang
+						? order?.data?.d05_ts?.noi_dung[0]?.sothang
+						: order?.data?.d03_ts?.noi_dung[0]?.so_thang
 					}
 					readOnly
 				/>
@@ -339,12 +295,12 @@ export default function OrderDetail() {
 				)}
 				<InputGroup
 					label={t("receipt_number")}
-					value={isBHXH ? order.data.d05_ts.noi_dung[0].so_bien_lai : order.data.d03_ts.noi_dung[0].so_bien_lai}
+					value={isBHXH ? order?.data?.d05_ts?.noi_dung[0]?.so_bien_lai : order?.data?.d03_ts?.noi_dung[0]?.so_bien_lai}
 					readOnly
 				/>
 				<DatePickerCustom
 					label={t("receipt_date")}
-					value={dayjs(isBHXH ? order.data.d05_ts.noi_dung[0].ngay_bien_lai : order.data.d03_ts.noi_dung[0].ngay_bien_lai, "DD/MM/YYYY")}
+					value={dayjs(isBHXH ? order?.data?.d05_ts?.noi_dung[0]?.billing_date : order?.data?.d03_ts?.noi_dung[0]?.billing_date, "DD/MM/YYYY")}
 					format={"DD/MM/YYYY"}
 					readOnly
 				/>
@@ -426,7 +382,7 @@ export default function OrderDetail() {
 					<>
 					<InputGroup
 						label={t("health_ins_benefit_level")}
-						value={order.data.d03_ts.noi_dung[0].muc_huong}
+						value={order?.data?.d03_ts?.noi_dung[0]?.muc_huong}
 						readOnly
 					/>
 					<InputGroup label={t("household_code")} value="" readOnly />
@@ -555,7 +511,7 @@ export default function OrderDetail() {
 			</div>
 			</>
 		)}
-		<Loading stateShow={isLoading} />
+		<Loading stateShow={isLoadProvinces || isLoadEthinicities || isLoadOrderDetail} />
 		</div>
 	);
 }

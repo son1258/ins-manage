@@ -41,7 +41,7 @@ export default function LanguageSwitcher() {
     };
 
     return (
-        <div className="relative border-l pl-4 border-gray-200" ref={dropdownRef}>
+        <div className="relative pl-4 border-gray-200" ref={dropdownRef}>
             <button
                 className="flex items-center gap-2 group cursor-pointer"
                 onClick={() => setIsOpen(!isOpen)}

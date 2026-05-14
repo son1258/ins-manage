@@ -3,7 +3,7 @@
 import { faSearch, faSync, faFileExport } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import Link from 'next/link';
 import InputGroup from '@/components/InputGroup';
@@ -11,14 +11,13 @@ import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { handleApiError } from '@/utils/errorHandler';
-import { loadOrders } from '@/services/orderService';
 import Loading from '@/components/Loading';
-import { DECLARATION_STATUS, PAYMENT_STATUS, PLANS, SERVICE_CODE, STATUS } from '@/constants';
+import { DECLARATION_STATUS, PAYMENT_STATUS, PLANS, SERVICE_CODE } from '@/constants';
 import CustomSelect from '@/components/CustomSelect';
 import dayjs from 'dayjs';
 import DateRangePicker from '@/components/DateRangePicker';
 import { formatVND } from '@/utils/common';
+import { useOrderList } from '@/hooks/useOrder';
 
 export default function Declarations() {
     const t = useTranslations();
@@ -27,14 +26,9 @@ export default function Declarations() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const accessToken = Cookies.get('accessToken');
+    const accessToken = Cookies.get('accessToken') || "";
     const today = dayjs();
     const from = today.subtract(6, "day");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [totalPage, setTotalPage] = useState(0);
-    const [orders, setOrders] = useState<any[]>([]);
-    const [isLoading, startTransition] = useTransition();
     const [selectedDeclaration, setSelectedDeclaration] = useState(SERVICE_CODE.BHXH);
 
     const declarations = [
@@ -68,14 +62,18 @@ export default function Declarations() {
         { code: DECLARATION_STATUS.CANCELLED_DECLARATION, name: t('cancelled_declaration') },
     ]
 
-    const [formData, setFormData] = useState<any>({
-        limit: 10,
-        page: 1,
-        serviceCode: SERVICE_CODE.BHXH,
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = Number(searchParams.get('limit')) || 10;
+    const statusParam = searchParams.get('status') != null ? Number(searchParams.get('status')) : "";
+    const serviceCodeParam = searchParams.get('service_code') != null ? Number(searchParams.get('service_code')) : SERVICE_CODE.BHXH;
+    const params = {
+        limit: limit,
+        page: page,
+        serviceCode: serviceCodeParam,
         medicalCode: "",
         customerName: "",
         customerPhone: "",
-        status: STATUS.ACTIVE,
+        status: statusParam,
         plan: "",
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
@@ -83,7 +81,44 @@ export default function Declarations() {
         receiptToDate: "",
         fromMonth: "",
         toMonth: ""
-    });
+    }
+
+    const defaultParams = {
+        limit: 10,
+        page: 1,
+        serviceCode: SERVICE_CODE.BHXH,
+        medicalCode: "",
+        customerName: "",
+        customerPhone: "",
+        status: "",
+        plan: "",
+        fromDate: from.format("YYYY-MM-DD"),
+        toDate: today.format("YYYY-MM-DD"),
+        receiptFromDate: "",
+        receiptToDate: "",
+        fromMonth: "",
+        toMonth: ""
+    }
+
+    const [formData, setFormData] = useState(params);
+    const {data: ordersRes, isLoading: isLoadOrders, isError: errLoadOrders} = useOrderList(params, accessToken);
+    const orders = errLoadOrders ? [] : ordersRes?.data;
+
+    const getPaymentStatus = (status: string) => {
+        const statusMap: Record<string, { bg: string; label: string }> = {
+            [PAYMENT_STATUS.RECORDED]:  { bg: 'bg-green-600', label: t('recorded') },
+            [PAYMENT_STATUS.WAIT_PAID]: { bg: 'bg-amber-400', label: t('pending_payment') },
+        }
+        return statusMap[status] ?? { bg: 'bg-blue-600', label: t('paid') }
+    }
+
+    const getPlanLabel = (plan: string) => {
+        const planMap: Record<string, string> = {
+            [PLANS.NEW]:     t('new'),
+            [PLANS.RENEWAL]: t('renewal'),
+        }
+        return planMap[plan] ?? t('decrease')
+    }
 
     const handleValueChange = (nameField: string, value: any) => {
         if (nameField == 'serviceCode') {
@@ -98,30 +133,34 @@ export default function Declarations() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        const params = new URLSearchParams();
-        params.set('limit', String(formData.limit));
-        params.set('page', '1');
-        params.set('status', String(formData.status));
-        params.set('from_date', String(formData.fromDate));
-        params.set('to_date', String(formData.toDate));
-        params.set('service_code', String(formData.serviceCode));
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        newParams.set('status', String(formData.status));
+        newParams.set('from_date', String(formData.fromDate));
+        newParams.set('to_date', String(formData.toDate));
+        newParams.set('service_code', String(formData.serviceCode));
         if (formData.medicalCode) {
-            params.set('medical_code', formData.medicalCode);
+            newParams.set('medical_code', formData.medicalCode);
         }
         if (formData.customerName) {
-            params.set('customer_name', formData.customerName);
+            newParams.set('customer_name', formData.customerName);
         }
         if (formData.plan) {
-            params.set('plan', formData.plan);
+            newParams.set('plan', formData.plan);
         }
         if (formData.customerPhone) {
-            params.set('customer_phone', formData.customerPhone);
+            newParams.set('customer_phone', formData.customerPhone);
         }
-        router.push(`${pathname}?${params.toString()}`);
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleRefresh = () => {
-        router.push(pathname);
+        setFormData(defaultParams)
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handlePageChange = (page: number) => {
@@ -143,22 +182,6 @@ export default function Declarations() {
         return Number(serviceCode) == SERVICE_CODE.BHXH ? dayjs(date).format("MM-YYYY") : dayjs(date).format("DD-MM-YYYY");                                         
     } 
 
-    const getOrders = async (data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadOrders(data, accessToken);
-                if (resp && resp.success) {
-                    setOrders(resp.data);
-                    setTotalPage(resp.paginate.total);
-                }
-            } catch(err: any) {
-                console.log('Error get medicals: ', err);
-                handleApiError(err, t);
-            }
-        })
-    }
-
     const getServiceNameFromCode = (serviceCode: number) => {
         const find = declarations.find((item: any) => item.code == serviceCode);
         return find?.acronym.toUpperCase();
@@ -166,39 +189,7 @@ export default function Declarations() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t('list_declaration')));
-        const serviceCode = Number(searchParams.get('service_code')) || SERVICE_CODE.BHXH;
-        const medicalCodeParams = searchParams.get('medical_code');
-        const customerNameParams = searchParams.get('customer_name');
-        const customerPhoneParam = searchParams.get('customer_phone');
-        const planParams = searchParams.get('plan');
-        const fromDateParams = searchParams.get('from_date');
-        const toDateParams = searchParams.get('to_date');
-        const statusParams = searchParams.get('status');
-        const limitParams = Number(searchParams.get('limit')) || 10;
-        const pageParams = Number(searchParams.get('page')) || 1;
-
-        const dataFromUrl = {
-            limit: limitParams || 10,
-            page: pageParams || 1,
-            serviceCode: serviceCode || SERVICE_CODE.BHXH,
-            medicalCode: medicalCodeParams || "",
-            customerName: customerNameParams || "",
-            customerPhone: customerPhoneParam || "",
-            status: (statusParams !== null && statusParams !== "") ? Number(statusParams) : "",
-            plan: planParams || "",
-            fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
-            toDate: toDateParams || today.format("YYYY-MM-DD"),
-            receiptFromDate: "",
-            receiptToDate: "",
-            fromMonth: "",
-            toMonth: ""
-        }
-
-        setFormData(dataFromUrl);
-        setCurrentPage(dataFromUrl.page);
-        setPageSize(dataFromUrl.limit);
-        getOrders(dataFromUrl);
-    },[searchParams])
+    },[t])
 
     return (
         <div className="flex flex-col gap-3 text-black pb-4 w-full">
@@ -317,7 +308,7 @@ export default function Declarations() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4 gap-2">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('list_declaration')}</h1>
-                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
+                            <span className="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full">{orders && orders.length}</span>
                         </div>
                         <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-[#2a5285] transition-colors">
                             <FontAwesomeIcon icon={faFileExport} />{t('export_excel')}
@@ -375,20 +366,22 @@ export default function Declarations() {
                                                 {getServiceNameFromCode(order.service_code)}
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-700">
-                                                {
-                                                    order.ld_pa == PLANS.NEW ? t('new') :
-                                                    order.ld_pa == PLANS.RENEWAL ? t('renewal') : t('decrease')
-                                                }
+                                                {getPlanLabel(order.ld_pa)}
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">{order.ld_name}</td>
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.ld_dob).format("DD-MM-YYYY")}</td>
                                             <td className="px-4 py-3 text-gray-600">{order.ld_maso_bhxh}</td>
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.created_at).format("DD/MM/YYYY")}</td>
-                                            <td className="px-4 py-3 text-gray-600">{order.ngay_bien_lai}</td>
+                                            <td className="px-4 py-3 text-gray-600">{order.billing_date}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <span className={`${order.status == PAYMENT_STATUS.RECORDED ? 'bg-green-600' : order.status == PAYMENT_STATUS.WAIT_PAID ? 'bg-amber-400' : 'bg-blue-600'} text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap`}>
-                                                    {order.status == PAYMENT_STATUS.RECORDED ? t('recorded') : order.status == PAYMENT_STATUS.WAIT_PAID ? t('pending_payment') : t('paid') }
-                                                </span>
+                                                {(() => {
+                                                    const { bg, label } = getPaymentStatus(order.status)
+                                                    return (
+                                                        <span className={`${bg} text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap`}>
+                                                            {label}
+                                                        </span>
+                                                    )
+                                                })()}
                                             </td>
                                             <td className="px-4 py-3 text-right">{order.distributors_order_number}</td>
                                             <td className="px-4 py-3 text-right">
@@ -411,16 +404,16 @@ export default function Declarations() {
                             </table>
                         </div>
                         <Pagination
-                            currentPage={currentPage}
-                            totalItems={totalPage}
-                            pageSize={pageSize}
+                            currentPage={page}
+                            totalItems={ordersRes?.paginate.total || 0}
+                            pageSize={limit}
                             onPageChange={(page) => handlePageChange(page)}
                             onPageSizeChange={(limit) => handleLimitChange(limit)}
                         />
                     </div>
                 </div>
             </div>
-            <Loading stateShow={isLoading}/>
+            <Loading stateShow={isLoadOrders}/>
         </div>
     )
 }

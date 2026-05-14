@@ -2,12 +2,12 @@
 
 import { faSearch, faSync } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { setBatchPayments, setExcludedItems, setIsPaymentDate, setSelectedItems, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
+import { setBatchPayments, setExcludedItems, setIsPaymentDate, setIsSynced, setSelectedItems, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
 import { PAYMENT_STATUS, PLANS, SERVICE_CODE } from '@/constants';
@@ -15,47 +15,62 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DateRangePicker from '@/components/DateRangePicker';
 import { handleApiError } from '@/utils/errorHandler';
 import Cookies from 'js-cookie';
-import { loadOrders } from '@/services/orderService';
 import dayjs from 'dayjs';
 import { formatVND } from '@/utils/common';
 import Loading from '@/components/Loading';
 import { createPaymentWithFilter, updatePaymentWithFilter } from '@/services/paymentService';
+import { useOrderList } from '@/hooks/useOrder';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function CreatePaymentRequest() {
     const t = useTranslations();
     const router = useRouter();
-    const locale = useLocale();
     const pathname = usePathname();
-    const dispatch = useDispatch();
-    const accessToken = Cookies.get('accessToken');
-    const today = dayjs();
+    const dispatch = useDispatch(); 
+    const accessToken = Cookies.get('accessToken') || "";
+    const today = useMemo(() => dayjs(), []);
     const searchParams = useSearchParams();
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
     const [isLoading, startTransition] = useTransition();
-    const [totalItems, setTotalItems] = useState(0);
-    const [plans, setPlans] = useState<any[]>([]);
-    const [orders, setOrders] = useState<any[]>([]);
     const [excludedIds, setExcludedIds] = useState<any[]>([]);
     const dataSelectedIds = useSelector((state: any) => state.payment.selectedItems);
     const [isCheckAllPayments, setIsCheckAllPayments] = useState(false);
     const [amountMap, setAmountMap] = useState<any>({});
-    const [tempPaymentFilter, setTempPaymentFilter] = useState({
+    const queryClient = useQueryClient();
+    const [tempPaymentFilter, setTempPaymentFilter] = useState<any>({
         batchPaymentId: "",
         fromDate: "",
         toDate: "",
         excludedIds: [],
     })
-    
-    const [formData, setFormData] = useState<any>({
-        serviceCode: null,
+
+    const defaultParams = {
+        serviceCode: "",
         medicalCode: "",
         customerName: "",
         status: PAYMENT_STATUS.RECORDED,
         plan: "",
-        fromDate: today,
-        toDate: today
-    });
+        fromDate: today.format("YYYY-MM-DD"),
+        toDate: today.format("YYYY-MM-DD"),
+        limit: 10,
+        page: 1
+    }
+
+    const page = Number(searchParams.get('page')) || 1;
+    const limit = Number(searchParams.get('limit')) || 10;
+    const params = {
+        serviceCode: searchParams.get('service_code') != null ? Number(searchParams.get('service_code')) : "",
+        medicalCode: searchParams.get('medical_code') != null ? searchParams.get('medical_code') : "",
+        customerName: searchParams.get('customer_name') != null ? searchParams.get('customer_name') : "",
+        status: searchParams.get('status') !== null ? Number(searchParams.get('status')) : PAYMENT_STATUS.RECORDED,
+        plan: searchParams.get('plan') != null ? String(searchParams.get('plan')) : "",
+        fromDate: searchParams.get('from_date') !== null ? searchParams.get('from_date') : today.format("YYYY-MM-DD"),
+        toDate: searchParams.get('to_date') !== null ? searchParams.get('to_date') : today.format("YYYY-MM-DD"),
+        limit: limit,
+        page: page
+    }
+    const {data: ordersRes, isLoading: isLoadOrders, isError: errLoadOrders} = useOrderList(params, accessToken);
+    const orders = errLoadOrders ? [] : ordersRes?.data;
+    const [formData, setFormData] = useState<any>(params);
 
     const declarations = [
         {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
@@ -63,23 +78,6 @@ export default function CreatePaymentRequest() {
     ]
 
     const handleValueChange = (nameField: string, value: any) => {
-        if (nameField == 'serviceCode') {
-            if (value == SERVICE_CODE.BHXH) {
-                setPlans([
-                    {code: PLANS.NEXT_PAYMENT, name: t('next_payment')},
-                    {code: PLANS.NEW, name: t('new')},
-                    {code: PLANS.DECREASE, name: t('decrease')},
-                    {code: PLANS.REPAY, name: t('repay')},
-                    {code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment')},
-                ])
-            } else {
-                setPlans([
-                    {code: PLANS.RENEWAL, name: t('renewal')},
-                    {code: PLANS.NEW, name: t('new')},
-                    {code: PLANS.DECREASE, name: t('decrease')},
-                ])
-            }
-        } 
         setFormData((prev: any) => ({
             ...prev,
             [nameField]: value
@@ -87,9 +85,13 @@ export default function CreatePaymentRequest() {
     }
 
     const handleRefresh = () => {
-        router.push(pathname);
+        setFormData(defaultParams);
         setIsCheckAllPayments(false);
         dispatch(setSelectedItems([]));
+        const newParams = new URLSearchParams();
+        newParams.set('limit', String(formData.limit));
+        newParams.set('page', '1');
+        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleSearch = (e: React.FormEvent) => {
@@ -115,22 +117,23 @@ export default function CreatePaymentRequest() {
     }
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const currentIds = orders.map(item => item.id);
+        const currentIds = orders.map((item: any) => item.id);
         if (isCheckAllPayments) {
             let newExcludedIds = [...excludedIds];
             if (e.target.checked) {
                 newExcludedIds = newExcludedIds.filter(id => !currentIds.includes(id));
             } else {
-                currentIds.forEach(id => {
+                currentIds.forEach((id: string) => {
                     if (!newExcludedIds.includes(id)) newExcludedIds.push(id);
                 });
             }
             setExcludedIds(newExcludedIds);
             dispatch(setExcludedItems(newExcludedIds));
+            dispatch(setIsSynced(false))
         } else {
             let newSelectedIds = [...dataSelectedIds];
             if (e.target.checked) {
-                currentIds.forEach(id => {
+                currentIds.forEach((id: string) => {
                     if (!newSelectedIds.includes(id)) newSelectedIds.push(id);
                 })
             } else {
@@ -151,6 +154,7 @@ export default function CreatePaymentRequest() {
             }
             setExcludedIds(newExcludedIds);
             dispatch(setExcludedItems(newExcludedIds));
+            dispatch(setIsSynced(false))
         } else {
             let newSelectedIds = [...dataSelectedIds];
             if (newSelectedIds.includes(id)) {
@@ -161,21 +165,6 @@ export default function CreatePaymentRequest() {
             dispatch(setSelectedItems(newSelectedIds));
             calculateTotalAmount(newSelectedIds);
         }
-    }
-
-    const getOrders = async (data: any) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadOrders(data, accessToken);
-                if (resp && resp.success) {
-                    setOrders(resp.data);
-                    setTotalItems(resp.paginate.total);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
     }
 
     const handlePageChange = (page: number) => {
@@ -218,12 +207,14 @@ export default function CreatePaymentRequest() {
                     const resp = await createPaymentWithFilter(data, accessToken);
                     if (resp && resp.success) {
                         handleDataPaymentWithDate(resp.data[0]);
-                        setTempPaymentFilter(prev => ({
+                        dispatch(setBatchPayments(resp.data[0].batch_payment));
+                        setTempPaymentFilter((prev: any) => ({
                             ...prev,
                             batchPaymentId: resp.data[0].batch_payment.id,
                             fromDate: formData.fromDate,
                             toDate: formData.toDate,
                         }));
+                        dispatch(setIsSynced(true));
                     } 
                 } catch(err: any) {
                     handleApiError(err, t);
@@ -248,8 +239,8 @@ export default function CreatePaymentRequest() {
                 }
                 const resp = await updatePaymentWithFilter(data, accessToken);
                 if (resp && resp.success) {
-                    dispatch(setBatchPayments(resp.data[0].batch_payment));
                     handleDataPaymentWithDate(resp.data[0]);
+                    dispatch(setIsSynced(true))
                 }
             } catch(err: any) {
                 handleApiError(err, t);
@@ -264,45 +255,44 @@ export default function CreatePaymentRequest() {
         dispatch(setTotalAmount(total));
     };
 
+    const plans = useMemo(() => {
+        if (formData.serviceCode == SERVICE_CODE.BHXH) {
+            return [
+                {code: PLANS.NEXT_PAYMENT, name: t('next_payment')},
+                {code: PLANS.NEW, name: t('new')},
+                {code: PLANS.DECREASE, name: t('decrease')},
+                {code: PLANS.REPAY, name: t('repay')},
+                {code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment')},
+            ]
+        }
+        if (formData.serviceCode != "") {
+            return [
+                {code: PLANS.RENEWAL, name: t('renewal')},
+                {code: PLANS.NEW, name: t('new')},
+                {code: PLANS.DECREASE, name: t('decrease')},
+            ]
+        }
+        return []
+    }, [formData.serviceCode, t])
+
+    const isMounted = useRef(false)
+    useEffect(() => {
+        if (!isMounted.current) {
+            isMounted.current = true
+            return
+        }
+        setFormData((prev: any) => ({ ...prev, plan: "" }))
+    }, [formData.serviceCode])
+
     useEffect(() => {
         dispatch(setActiveTitle(t("create_payment_request")));
-        const serviceCode = Number(searchParams.get('service_code'));
-        const medicalCodeParams = searchParams.get('medical_code');
-        const customerNameParams = searchParams.get('customer_name');
-        const planParams = searchParams.get('plan');
-        const fromDateParams = searchParams.get('from_date');
-        const toDateParams = searchParams.get('to_date');
-        const statusParams = searchParams.get('status');
-        const limitParams = Number(searchParams.get('limit')) || 10;
-        const pageParams = Number(searchParams.get('page')) || 1;
-   
-        const dataFromUrl = {
-            limit: limitParams || 10,
-            page: pageParams || 1,
-            serviceCode: serviceCode,
-            medicalCode: medicalCodeParams || "",
-            customerName: customerNameParams || "",
-            status: (statusParams != null) ? Number(statusParams) : PAYMENT_STATUS.RECORDED,
-            plan: planParams || "",
-            fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
-            toDate: toDateParams || today.format("YYYY-MM-DD"),
-            receiptFromDate: "",
-            receiptToDate: "",
-            fromMonth: "",
-            toMonth: ""
-        }
-
-        setFormData(dataFromUrl);
-        setCurrentPage(dataFromUrl.page);
-        setPageSize(dataFromUrl.limit);
-        getOrders(dataFromUrl);
-    },[searchParams]) 
+    },[t]) 
 
     useEffect(() => {
-        if (orders.length > 0) {
+        if (orders && orders.length > 0) {
             setAmountMap((prev:any) => {
                 const newMap = { ...prev };
-                orders.forEach(item => {
+                orders.forEach((item: any) => {
                     let num = 0;
                     if (typeof item.amount === 'string') {
                         num = parseInt(item.amount.replace(/\./g, '')) || 0;
@@ -322,6 +312,7 @@ export default function CreatePaymentRequest() {
         dispatch(setTotalAmount(0));
         dispatch(setBatchPayments({}));
         dispatch(setIsPaymentDate(false));
+        dispatch(setIsSynced(false));
         setExcludedIds([]);
         setIsCheckAllPayments(false);
     }, []);
@@ -407,7 +398,7 @@ export default function CreatePaymentRequest() {
                     <div className="flex flex-wrap justify-between items-center bg-white px-4 pt-4">
                         <div className="flex items-center gap-2">
                             <h1 className="font-bold text-gray-800 text-sm">{t('record_list')}</h1>
-                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{orders.length}</span>
+                            <span className="bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">{orders && orders.length}</span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                             <label className="flex items-center cursor-pointer font-bold">
@@ -441,8 +432,8 @@ export default function CreatePaymentRequest() {
                                                     type="checkbox" 
                                                     onChange={handleSelectAll}
                                                     checked={isCheckAllPayments 
-                                                        ? orders.every(item => !excludedIds.includes(item.id))
-                                                        : (orders.length > 0 && orders.every(item => dataSelectedIds.includes(item.id)))}
+                                                        ? orders.every((item: any) => !excludedIds.includes(item.id))
+                                                        : (orders.length > 0 && orders.every((item: any) => dataSelectedIds.includes(item.id)))}
                                                     className="w-4 h-4 cursor-pointer"
                                                 />
                                             )}
@@ -458,7 +449,7 @@ export default function CreatePaymentRequest() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {orders.map((order, idx) => {
+                                    {orders && orders.map((order: any) => {
                                         const isSelected = isCheckAllPayments ? 
                                             !excludedIds.includes(order.id)
                                             : dataSelectedIds?.includes(order.id);
@@ -496,16 +487,16 @@ export default function CreatePaymentRequest() {
                             </table>
                         </div>
                         <Pagination
-                            currentPage={currentPage}
-                            totalItems={totalItems}
-                            pageSize={pageSize}
+                            currentPage={page}
+                            totalItems={ordersRes?.paginate.total || 0}
+                            pageSize={limit}
                             onPageChange={(page) => handlePageChange(page)}
                             onPageSizeChange={(limit) => handleLimitChange(limit)}
                         />
                     </div>
                 </div>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoading || isLoadOrders} />
         </div>
     )
 }

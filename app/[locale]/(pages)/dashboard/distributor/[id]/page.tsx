@@ -1,29 +1,31 @@
 "use client"
 
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
-import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react"
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux";
 import Cookies from 'js-cookie';
 import { handleApiError } from "@/utils/errorHandler";
 import { useParams, useRouter } from "next/navigation";
-import { loadDistributorById, updateDistributor } from "@/services/distributorService";
 import Loading from "@/components/Loading";
 import InputGroup from "@/components/InputGroup";
 import { toast } from "react-toastify";
+import { useDistributorDetail, useUpdateDistributorMutation } from "@/hooks/useDistributor";
+import CustomSelect from "@/components/CustomSelect";
+import { useProductList } from "@/hooks/useCommonHook";
 
 export default function EditDistributor() {
     const t = useTranslations();
     const dispatch = useDispatch();
-    const locale = useLocale();
     const params: any = useParams();
     const router = useRouter();
-    const accessToken = Cookies.get('accessToken');
-    const [isLoading, startTransition] = useTransition();
+    const accessToken = Cookies.get('accessToken') || "";
     const [formData, setFormData] = useState({
         distributorId: "",
         distributorCode: "",
-        distributorName: ""
+        distributorName: "",
+        productIds: [],
+        catalogIds: []
     });
 
     const [errors, setErrors] = useState<any>({
@@ -31,7 +33,24 @@ export default function EditDistributor() {
         distributorName: false
     });
 
+    const {data: productsRes, isLoading: isLoadProducts, isError: errLoadProducts} = useProductList(accessToken);
+    const {data: distributorDetailRes, isLoading: isLoadDistributorDetail, isError: errLoadDistributor} = useDistributorDetail(params.id, accessToken);
+    const products = errLoadProducts ? [] : productsRes?.data;
+    const distributorDetail = errLoadDistributor ? [] : distributorDetailRes?.data;
+    const updateDistributor = useUpdateDistributorMutation(accessToken);
+
     const handleValueChange = (nameField: string, value: any) => {
+        if (nameField === "productIds") {
+            const selectedProducts = products.filter((item: any) =>
+                value.includes(item.id)
+            );
+            setFormData(prev => ({
+                ...prev,
+                productIds: value,
+                catalogIds: selectedProducts.map((item: any) => item.category?.id).filter(Boolean)
+            }));
+        }
+
         setFormData(prev => ({
             ...prev,
             [nameField]: value
@@ -40,55 +59,48 @@ export default function EditDistributor() {
         setErrors((prev: any) => ({
             ...prev,
             [nameField]: !value
-        }))
+        }));
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const hasError = Object.values(errors).some(value => value === true);
         if (!accessToken || hasError) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    id: formData.distributorId,
-                    code: formData.distributorCode,
-                    name: formData.distributorName
-                }
-                const resp = await updateDistributor(data, accessToken);
-                if (resp && resp.success) {
-                    toast.success(t('success'))
-                    router.push(`/${locale}/dashboard/distributor`);
-                }
-            } catch(err: any) {
-                console.log('Error update distributor: ', err);
-                handleApiError(err, t);
+        updateDistributor.mutate({
+            id: formData.distributorId,
+            code: formData.distributorCode,
+            name: formData.distributorName,
+            list_products: formData.productIds,
+            list_categories: formData.catalogIds
+        }, {
+            onSuccess: () => {
+                toast.success(t('success'));
+                router.back();
+            },
+            onError: (err: any) => {
+                handleApiError(err, t)
             }
-        })
-    }
-
-    const getDistributorById = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadDistributorById(params.id, accessToken);
-                if (resp && resp.data) {
-                    const data = {
-                        distributorId: resp.data.id,
-                        distributorCode: resp.data.code,
-                        distributorName: resp.data.name
-                    }
-                    setFormData(data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            } 
-        })
+        });
     }
 
     useEffect(() => {
         dispatch(setActiveTitle(t('update_distributor')));
-        getDistributorById();
-    }, [params.id])
+    }, [t])
+
+    useEffect(() => {
+        if (distributorDetail) {
+            const listProductIds = distributorDetail?.products.map((item: any) => item.id) || [];
+            const listCatalogIds = distributorDetail?.products.map((item: any) => item.category.id) || [];
+
+            setFormData({
+                distributorId: distributorDetail.id,
+                distributorCode: distributorDetail.code,
+                distributorName: distributorDetail.name,
+                productIds: listProductIds,
+                catalogIds: listCatalogIds
+            })
+        }
+    },[distributorDetail])
     
     return (
          <div className="p-6 bg-gray-50 min-h-screen text-black">
@@ -98,12 +110,13 @@ export default function EditDistributor() {
                 </div>
                 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <InputGroup 
                             label={t('distributor_code')}
                             value={formData.distributorCode}
                             onChange={(e) => handleValueChange("distributorCode", e.target.value)}
                             isError={errors.distributorCode}
+                            readOnly
                         />
                         <InputGroup 
                             label={t('distributor_name')}
@@ -111,6 +124,19 @@ export default function EditDistributor() {
                             onChange={(e) => handleValueChange("distributorName", e.target.value)}
                             isError={errors.distributorName}
                         />
+                         <div className="flex flex-col gap-1.5">
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('type')}<span className="text-red-500 mr-1">*</span></label>
+                            <CustomSelect
+                                mode="multiple"
+                                placeholder={t('select_option')}
+                                value={formData.productIds || undefined} 
+                                onChange={(value) => handleValueChange("productIds", value)}
+                                options={products && products.map((collector: any) => ({
+                                    value: collector.id,
+                                    label: collector.name,
+                                }))}
+                            />
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-3">
@@ -122,7 +148,7 @@ export default function EditDistributor() {
                     </div>  
                 </form>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadDistributorDetail || isLoadProducts || updateDistributor.isPending} />
         </div>
     )
 }

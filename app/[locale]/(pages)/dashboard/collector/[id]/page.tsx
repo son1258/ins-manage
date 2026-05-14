@@ -7,13 +7,13 @@ import { useDispatch } from "react-redux";
 import Cookies from 'js-cookie';
 import { handleApiError } from "@/utils/errorHandler";
 import { useParams, useRouter } from "next/navigation";
-import { loadDistributors } from "@/services/distributorService";
 import Loading from "@/components/Loading";
 import InputGroup from "@/components/InputGroup";
 import { toast } from "react-toastify";
 import CustomSelect from "@/components/CustomSelect";
-import { loadCollectorById, updateCollector } from "@/services/collectorService";
 import { STATUS } from "@/constants";
+import { useDistributorList } from "@/hooks/useDistributor";
+import { useCollectorDetail, useUpdateCollectorMutation } from "@/hooks/useCollector";
 
 export default function EditDistributor() {
     const t = useTranslations();
@@ -21,8 +21,7 @@ export default function EditDistributor() {
     const locale = useLocale();
     const params: any = useParams();
     const router = useRouter();
-    const accessToken = Cookies.get('accessToken');
-    const [distributors, setDistributors] = useState<any[]>([]);
+    const accessToken = Cookies.get('accessToken') || "";
     const [isLoading, startTransition] = useTransition();
 
     const [formData, setFormData] = useState({
@@ -36,6 +35,15 @@ export default function EditDistributor() {
         collectorCode: false,
         collectorName: false
     });
+
+    const {data: distributorsResp, isLoading: isLoadDistributor, isError: errDistributor} = useDistributorList({status: STATUS.ACTIVE}, accessToken)
+    const {data: collectorResp, isLoading: isLoadCollector, isError: errCollectorDetail} = useCollectorDetail(params.id, accessToken);
+    const distributors = errDistributor ? [] : distributorsResp?.data.map((item: any) => ({
+        label: `${item.code}_${item.name}`,
+        value: item.id
+    }));
+    const collectorDetail = errCollectorDetail ? [] : collectorResp?.data;
+    const updateCollector = useUpdateCollectorMutation(accessToken);
 
     const handleValueChange = (nameField: string, value: any) => {
         setFormData(prev => ({
@@ -58,65 +66,36 @@ export default function EditDistributor() {
             toast.error(t('err_field_required'));
         }
         if (!accessToken || hasError) return;
-        startTransition(async () => {
-            try {
-                const data = {
-                    distributor_id: formData.distributorId,
-                    id: formData.collectorId,
-                    code: formData.collectorCode,
-                    name: formData.collectorName
-                }
-                const resp = await updateCollector(data, accessToken);
-                if (resp && resp.success) {
-                    toast.success(t('success'))
-                    router.push(`/${locale}/dashboard/collector`);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getDistributors = async () => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadDistributors({status: STATUS.ACTIVE}, accessToken);
-                if (resp) {
-                    setDistributors(resp.data);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
-            }
-        })
-    }
-
-    const getCollectorById = async (id: string) => {
-        if (!accessToken) return;
-        startTransition(async () => {
-            try {
-                const resp = await loadCollectorById(id, accessToken);
-                if (resp && resp.data) {
-                    const data = resp.data;
-                    const getDataCollector = {
-                        distributorId: data.distributor_id,
-                        collectorId: data.id,
-                        collectorCode: data.code,
-                        collectorName: data.name,
-                    }
-                    setFormData(getDataCollector);
-                }
-            } catch(err: any) {
-                handleApiError(err, t);
+        updateCollector.mutate({
+            distributor_id: formData.distributorId,
+            id: formData.collectorId,
+            code: formData.collectorCode,
+            name: formData.collectorName
+        }, {
+            onSuccess: () => {
+                toast.success(t('success'));
+                router.back();
+            },
+            onError: (err: any) => {
+                handleApiError(err, t)
             }
         })
     }
 
     useEffect(() => {
+        if (collectorDetail) {
+            setFormData({
+                distributorId: collectorDetail.distributor_id,
+                collectorId: collectorDetail.id,
+                collectorCode: collectorDetail.code,
+                collectorName: collectorDetail.name,
+            })
+        }
+    },[collectorDetail])
+
+    useEffect(() => {
         dispatch(setActiveTitle(t('update_collector')));
-        getDistributors();
-        getCollectorById(params.id);
-    }, [params.id])
+    }, [t])
     
     return (
          <div className="p-6 bg-gray-50 min-h-screen text-black">
@@ -135,9 +114,9 @@ export default function EditDistributor() {
                                 placeholder={t('select_option')}
                                 value={formData.distributorId} 
                                 onChange={(value) => handleValueChange("distributorId", value)}
-                                options={distributors.map((distributor: any) => ({
-                                    value: distributor.id,
-                                    label: `${distributor.code}_${distributor.name}`,
+                                options={distributors && distributors.map((distributor: any) => ({
+                                    value: distributor.value,
+                                    label: distributor.label,
                                 }))}
                             />
                         </div>
@@ -164,7 +143,7 @@ export default function EditDistributor() {
                     </div>  
                 </form>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadDistributor || isLoadCollector || updateCollector.isPending} />
         </div>
     )
 }

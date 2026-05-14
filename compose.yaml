@@ -9,12 +9,14 @@
 # https://github.com/docker/awesome-compose
 services:
   server:
-    build:
-      context: .
+    image: 941377160775.dkr.ecr.ap-southeast-1.amazonaws.com/ins-bhxh-fo:latest
+    container_name: ins-bhxh-fo
+    restart: always
+    ports:
+      - "3000:3000"
     environment:
       NODE_ENV: production
-    ports:
-      - 3000:3000
+    command: yarn start
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
