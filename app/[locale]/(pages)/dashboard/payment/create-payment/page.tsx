@@ -3,7 +3,7 @@
 import { faSearch, faSync } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -19,8 +19,27 @@ import dayjs from 'dayjs';
 import { formatVND } from '@/utils/common';
 import Loading from '@/components/Loading';
 import { createPaymentWithFilter, updatePaymentWithFilter } from '@/services/paymentService';
-import { useOrderList } from '@/hooks/useOrder';
 import { useQueryClient } from '@tanstack/react-query';
+import { loadOrders } from '@/services/orderService';
+
+interface FormDataProps {
+    serviceCode: any,
+    medicalCode: string,
+    customerName: string,
+    status: number,
+    plan: string,
+    fromDate: any,
+    toDate: any,
+    limit: number,
+    page: number
+}
+
+interface PaymentFilterProps {
+    batchPaymentId: string,
+    fromDate: string,
+    toDate: string,
+    excludedIds: any,
+}
 
 export default function CreatePaymentRequest() {
     const t = useTranslations();
@@ -30,20 +49,24 @@ export default function CreatePaymentRequest() {
     const accessToken = Cookies.get('accessToken') || "";
     const today = useMemo(() => dayjs(), []);
     const searchParams = useSearchParams();
+    const [pageSize, setPageSize] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [orders, setOrders] = useState<any[]>([]);
     const [isLoading, startTransition] = useTransition();
     const [excludedIds, setExcludedIds] = useState<any[]>([]);
     const dataSelectedIds = useSelector((state: any) => state.payment.selectedItems);
     const [isCheckAllPayments, setIsCheckAllPayments] = useState(false);
     const [amountMap, setAmountMap] = useState<any>({});
     const queryClient = useQueryClient();
-    const [tempPaymentFilter, setTempPaymentFilter] = useState<any>({
+    const [tempPaymentFilter, setTempPaymentFilter] = useState<PaymentFilterProps>({
         batchPaymentId: "",
         fromDate: "",
         toDate: "",
         excludedIds: [],
     })
 
-    const defaultParams = {
+    const [formData, setFormData] = useState<FormDataProps>({
         serviceCode: "",
         medicalCode: "",
         customerName: "",
@@ -53,24 +76,7 @@ export default function CreatePaymentRequest() {
         toDate: today.format("YYYY-MM-DD"),
         limit: 10,
         page: 1
-    }
-
-    const page = Number(searchParams.get('page')) || 1;
-    const limit = Number(searchParams.get('limit')) || 10;
-    const params = {
-        serviceCode: searchParams.get('service_code') != null ? Number(searchParams.get('service_code')) : "",
-        medicalCode: searchParams.get('medical_code') != null ? searchParams.get('medical_code') : "",
-        customerName: searchParams.get('customer_name') != null ? searchParams.get('customer_name') : "",
-        status: searchParams.get('status') !== null ? Number(searchParams.get('status')) : PAYMENT_STATUS.RECORDED,
-        plan: searchParams.get('plan') != null ? String(searchParams.get('plan')) : "",
-        fromDate: searchParams.get('from_date') !== null ? searchParams.get('from_date') : today.format("YYYY-MM-DD"),
-        toDate: searchParams.get('to_date') !== null ? searchParams.get('to_date') : today.format("YYYY-MM-DD"),
-        limit: limit,
-        page: page
-    }
-    const {data: ordersRes, isLoading: isLoadOrders, isError: errLoadOrders} = useOrderList(params, accessToken);
-    const orders = errLoadOrders ? [] : ordersRes?.data;
-    const [formData, setFormData] = useState<any>(params);
+    });
 
     const declarations = [
         {code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh"},
@@ -85,18 +91,16 @@ export default function CreatePaymentRequest() {
     }
 
     const handleRefresh = () => {
-        setFormData(defaultParams);
+        router.push(pathname);
         setIsCheckAllPayments(false);
+        setAmountMap({});
         dispatch(setSelectedItems([]));
-        const newParams = new URLSearchParams();
-        newParams.set('limit', String(formData.limit));
-        newParams.set('page', '1');
-        router.push(`${pathname}?${newParams.toString()}`);
     }
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setIsCheckAllPayments(false);
+        setAmountMap({});
         const params = new URLSearchParams();
         params.set('limit', String(formData.limit));
         params.set('page', '1');
@@ -166,6 +170,21 @@ export default function CreatePaymentRequest() {
             calculateTotalAmount(newSelectedIds);
         }
     }
+
+    const getOrders = useCallback(async (data: any) => {
+        if (!accessToken) return;
+        startTransition(async () => {
+            try {
+                const resp = await loadOrders(data, accessToken);
+                if (resp?.success) {
+                    setOrders(resp.data);
+                    setTotalItems(resp.paginate.total);
+                }
+            } catch(err: any) {
+                handleApiError(err, t);
+            }
+        })
+    }, [accessToken, t]);
 
     const handlePageChange = (page: number) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -318,6 +337,40 @@ export default function CreatePaymentRequest() {
         setExcludedIds([]);
         setIsCheckAllPayments(false);
     }, []);
+
+    useEffect(() => {
+        dispatch(setActiveTitle(t("create_payment_request")));
+        const serviceCode = Number(searchParams.get('service_code'));
+        const medicalCodeParams = searchParams.get('medical_code');
+        const customerNameParams = searchParams.get('customer_name');
+        const planParams = searchParams.get('plan');
+        const fromDateParams = searchParams.get('from_date');
+        const toDateParams = searchParams.get('to_date');
+        const statusParams = searchParams.get('status');
+        const limitParams = Number(searchParams.get('limit')) || 10;
+        const pageParams = Number(searchParams.get('page')) || 1;
+   
+        const dataFromUrl = {
+            limit: limitParams || 10,
+            page: pageParams || 1,
+            serviceCode: serviceCode,
+            medicalCode: medicalCodeParams || "",
+            customerName: customerNameParams || "",
+            status: (statusParams != null) ? Number(statusParams) : PAYMENT_STATUS.RECORDED,
+            plan: planParams || "",
+            fromDate: fromDateParams || today.subtract(6, "days").format("YYYY-MM-DD"),
+            toDate: toDateParams || today.format("YYYY-MM-DD"),
+            receiptFromDate: "",
+            receiptToDate: "",
+            fromMonth: "",
+            toMonth: ""
+        }
+
+        setFormData(dataFromUrl);
+        setCurrentPage(dataFromUrl.page);
+        setPageSize(dataFromUrl.limit);
+        getOrders(dataFromUrl);
+    },[searchParams])
 
     return (
         <div className="flex flex-col gap-3 text-black">
@@ -489,16 +542,16 @@ export default function CreatePaymentRequest() {
                             </table>
                         </div>
                         <Pagination
-                            currentPage={page}
-                            totalItems={ordersRes?.paginate.total || 0}
-                            pageSize={limit}
+                            currentPage={currentPage}
+                            totalItems={totalItems}
+                            pageSize={pageSize}
                             onPageChange={(page) => handlePageChange(page)}
                             onPageSizeChange={(limit) => handleLimitChange(limit)}
                         />
                     </div>
                 </div>
             </div>
-            <Loading stateShow={isLoading || isLoadOrders} />
+            <Loading stateShow={isLoading} />
         </div>
     )
 }
