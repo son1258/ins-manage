@@ -5,6 +5,10 @@
     "password": "Mật khẩu",
     "missing_info_login": "Thiếu thông tin đăng nhập",
 
+    "role": "Vai trò",
+    "admin_role": "Quản trị viên",
+    "user_role": "Người dùng",
+
     "support": "Hỗ trợ",
     "cancel": "Huỷ",
     "avatar": "Ảnh đại diện",
@@ -238,5 +242,6 @@
     "account_number": "Số tài khoản",
     "bank_name": "Ngân hàng",
     "amount": "Số tiền",
-    "explan": "Diễn giải"
+    "explan": "Diễn giải",
+    "social_info": "Thông tin BHXH"
 }

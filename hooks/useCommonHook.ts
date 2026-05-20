@@ -9,7 +9,7 @@ export const useProvinceList = (token: string) => {
 	})
 }
 
-export const useEthinicityList = (token: string) => {
+export const useEthnicityList = (token: string) => {
 	return useQuery({
 		queryKey: ['ethinicities'],
 		queryFn: () => loadEthinicities(token),
