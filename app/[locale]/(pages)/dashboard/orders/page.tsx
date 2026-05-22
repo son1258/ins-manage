@@ -81,12 +81,14 @@ export default function Declarations() {
     const statusParam = searchParams.get('status') != null ? Number(searchParams.get('status')) : "";
     const socialStatusParam = searchParams.get('provider_order_status') != null ? Number(searchParams.get('provider_order_status')) : "";
     const serviceCodeParam = searchParams.get('service_code') != null ? Number(searchParams.get('service_code')) : SERVICE_CODE.BHXH;
+    const medicalParam = searchParams.get('medical_code') != null ? Number(searchParams.get('medical_code')) : "";
+    const customerParam = searchParams.get('customer_name') != null ? searchParams.get('customer_name') : "";
     const params = {
         limit: limit,
         page: page,
         serviceCode: serviceCodeParam,
-        medicalCode: "",
-        customerName: "",
+        medicalCode: medicalParam,
+        customerName: customerParam,
         customerPhone: "",
         providerStatus: socialStatusParam,
         status: statusParam,
@@ -129,12 +131,14 @@ export default function Declarations() {
         return statusMap[status] ?? { bg: 'bg-blue-600', label: t('paid') }
     }
 
-    const getPlanLabel = (plan: string) => {
-        const planMap: Record<string, string> = {
-            [PLANS.NEW]: t('new'),
-            [PLANS.RENEWAL]: t('renewal'),
+    const getPlanLabel = (order: any) => {
+        let findPlan;
+        if (order.service_code == SERVICE_CODE.BHXH) {
+            findPlan = plans.bhxh.find((plan) => plan.code == order.ld_pa);
+        } else {
+            findPlan = plans.bhythgd.find((plan) => plan.code == order.ld_pa);
         }
-        return planMap[plan] ?? t('decrease')
+        return findPlan?.name
     }
 
     const handleValueChange = (nameField: string, value: any) => {
@@ -163,10 +167,10 @@ export default function Declarations() {
             newParams.set('provider_order_status', String(formData.providerStatus));
         }
         if (formData.medicalCode) {
-            newParams.set('medical_code', formData.medicalCode);
+            newParams.set('medical_code', String(formData.medicalCode));
         }
         if (formData.customerName) {
-            newParams.set('customer_name', formData.customerName);
+            newParams.set('customer_name', String(formData.customerName));
         }
         if (formData.plan) {
             newParams.set('plan', formData.plan);
@@ -413,7 +417,7 @@ export default function Declarations() {
                                                 {getServiceNameFromCode(order.service_code)}
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-700">
-                                                {getPlanLabel(order.ld_pa)}
+                                                {getPlanLabel(order)}
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">{order.ld_name}</td>
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.ld_dob).format("DD-MM-YYYY")}</td>
