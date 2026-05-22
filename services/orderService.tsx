@@ -36,6 +36,9 @@ export const loadOrders = (params: any, token: string) => {
     if (params.orderNumber) {
         queryParams.push(`order_number=${params.orderNumber}`)
     }
+    if (params.providerStatus != null) {
+        queryParams.push(`provider_order_status=${params.providerStatus}`)
+    }
 
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
@@ -73,4 +76,54 @@ export const loadOrderById = (id: string, token: string) => {
 export const loadInfoFromSocialCode = (id: string, token: string) => {
     const url = 'bhxh/info/bhxhinfo';
 
+}
+
+export const upDateOrder = (data: any, token: string) => {
+    const url = 'dvc/order/v2/update';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}
+
+export const downloadFileExcel = (params: any, token: string) => {
+    let url = 'dvc/orders/export-excel';
+    const queryParams: string[] = [];
+    if (params.limit) {
+        queryParams.push(`limit=${params.limit}`)
+    }
+    if (params.page) {
+        queryParams.push(`page=${params.page}`)
+    }
+    if (params.status != null) {
+        queryParams.push(`status=${params.status}`)
+    }
+    if (params.fromDate) {
+        queryParams.push(`from_date=${params.fromDate}`)
+    }
+    if (params.toDate) {
+        queryParams.push(`to_date=${params.toDate}`)
+    }
+    if (params.serviceCode) {
+        queryParams.push(`service_code=${params.serviceCode}`)
+    }
+    if (params.medicalCode) {
+        queryParams.push(`ld_maso_bhxh=${params.medicalCode}`)
+    }
+    if (params.customerName) {
+        queryParams.push(`ld_name=${params.customerName}`)
+    }
+    if (params.customerPhone) {
+        queryParams.push(`ld_phone=${params.customerPhone}`)
+    }
+    if (params.plan) {
+        queryParams.push(`ld_pa=${params.plan}`)
+    }
+    if (params.orderNumber) {
+        queryParams.push(`order_number=${params.orderNumber}`)
+    }
+
+    if (queryParams.length > 0) {
+        url += `?${queryParams.join("&")}`
+    }
+    const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
 }

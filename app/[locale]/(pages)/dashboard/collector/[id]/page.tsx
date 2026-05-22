@@ -1,8 +1,8 @@
 "use client"
 
 import { setActiveTitle } from "@/lib/redux/slices/menuSlice";
-import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react"
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux";
 import Cookies from 'js-cookie';
 import { handleApiError } from "@/utils/errorHandler";
@@ -11,21 +11,18 @@ import Loading from "@/components/Loading";
 import InputGroup from "@/components/InputGroup";
 import { toast } from "react-toastify";
 import CustomSelect from "@/components/CustomSelect";
-import { STATUS } from "@/constants";
-import { useDistributorList } from "@/hooks/useDistributor";
 import { useCollectorDetail, useUpdateCollectorMutation } from "@/hooks/useCollector";
+import { useProviderList } from "@/hooks/useProvider";
 
 export default function EditDistributor() {
     const t = useTranslations();
     const dispatch = useDispatch();
-    const locale = useLocale();
     const params: any = useParams();
     const router = useRouter();
     const accessToken = Cookies.get('accessToken') || "";
-    const [isLoading, startTransition] = useTransition();
 
     const [formData, setFormData] = useState({
-        distributorId: "",
+        providerId: "",
         collectorId: "",
         collectorCode: "",
         collectorName: "",
@@ -36,12 +33,13 @@ export default function EditDistributor() {
         collectorName: false
     });
 
-    const {data: distributorsResp, isLoading: isLoadDistributor, isError: errDistributor} = useDistributorList({status: STATUS.ACTIVE}, accessToken)
+    const { data: providersRes, isLoading: isLoadProviders, isError: errLoadProviders } = useProviderList(accessToken);
     const {data: collectorResp, isLoading: isLoadCollector, isError: errCollectorDetail} = useCollectorDetail(params.id, accessToken);
-    const distributors = errDistributor ? [] : distributorsResp?.data.map((item: any) => ({
-        label: `${item.code}_${item.name}`,
+    const providers = errLoadProviders ? [] : providersRes?.data.map((item: any) => ({
+        label: item.name,
         value: item.id
     }));
+
     const collectorDetail = errCollectorDetail ? [] : collectorResp?.data;
     const updateCollector = useUpdateCollectorMutation(accessToken);
 
@@ -67,7 +65,7 @@ export default function EditDistributor() {
         }
         if (!accessToken || hasError) return;
         updateCollector.mutate({
-            distributor_id: formData.distributorId,
+            provider_id: formData.providerId,
             id: formData.collectorId,
             code: formData.collectorCode,
             name: formData.collectorName
@@ -85,7 +83,7 @@ export default function EditDistributor() {
     useEffect(() => {
         if (collectorDetail) {
             setFormData({
-                distributorId: collectorDetail.distributor_id,
+                providerId: collectorDetail.provider.id,
                 collectorId: collectorDetail.id,
                 collectorCode: collectorDetail.code,
                 collectorName: collectorDetail.name,
@@ -108,15 +106,15 @@ export default function EditDistributor() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm text-gray-700 mb-1">
-                                    <span className="text-red-500 mr-1">*</span>{t('unit_payment')}
+                                    <span className="text-red-500 mr-1">*</span>{t('agency_name')}
                             </label>
                             <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.distributorId} 
-                                onChange={(value) => handleValueChange("distributorId", value)}
-                                options={distributors && distributors.map((distributor: any) => ({
-                                    value: distributor.value,
-                                    label: distributor.label,
+                                value={formData.providerId} 
+                                onChange={(value) => handleValueChange("providerId", value)}
+                                options={providers && providers.map((provider: any) => ({
+                                    value: provider.value,
+                                    label: provider.label,
                                 }))}
                             />
                         </div>
@@ -125,12 +123,14 @@ export default function EditDistributor() {
                             value={formData.collectorCode}
                             onChange={(e) => handleValueChange("collectorCode", e.target.value)}
                             isError={errors.collectorCode}
+                            required
                         />
                         <InputGroup 
                             label={t('collector_name')}
                             value={formData.collectorName}
                             onChange={(e) => handleValueChange("collectorName", e.target.value)}
                             isError={errors.collectorName}
+                            required
                         />
                     </div>
 
@@ -143,7 +143,7 @@ export default function EditDistributor() {
                     </div>  
                 </form>
             </div>
-            <Loading stateShow={isLoadDistributor || isLoadCollector || updateCollector.isPending} />
+            <Loading stateShow={isLoadProviders || isLoadCollector || updateCollector.isPending} />
         </div>
     )
 }

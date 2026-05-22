@@ -37,10 +37,10 @@ const InputGroup = ({
                 readOnly={readOnly}
                 className={`border rounded px-2 py-1.5 text-sm text-black outline-none transition-all h-8
                     ${isError 
-                        ? 'border-red-400 bg-red-50 text-red-700'
+                        ? 'border-red-400 bg-red-50 text-red-700' 
                         : 'border-gray-300 bg-white'
                     }
-                    ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}
+                    read-only:bg-gray-200 read-only:cursor-not-allowed
                 `}
             />
         </div>
