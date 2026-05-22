@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { STATUS } from '@/constants';
 import { useDistributorList } from '@/hooks/useDistributor';
 import { useCreateCollectorMutation } from '@/hooks/useCollector';
+import { useProviderList } from '@/hooks/useProvider';
 
 export default function CreateCollector() {
     const t = useTranslations();
@@ -21,19 +22,18 @@ export default function CreateCollector() {
     const accessToken = Cookies.get('accessToken') || "";
 
     const [formData, setFormData] = useState({
-        distributorId: "",
+        providerId: "",
         code: "",
         name: "",
     });
 
     const [errors, setErrors] = useState<any>({
-        distributorId: false,
+        providerId: false,
         code: false,
         name: false,
     })
-
-    const {data: distributorsResp, isLoading, isError} = useDistributorList({status: STATUS.ACTIVE}, accessToken);
-    const distributors = isError ? [] : (distributorsResp?.data || []);
+    const { data: providersRes, isLoading: isLoadProviders, isError: errLoadProviders } = useProviderList(accessToken);
+    const providers = errLoadProviders ? [] : providersRes?.data
     const createMutation = useCreateCollectorMutation(accessToken);
 
     const handleValueChange = (nameField: string, value: any) => {
@@ -50,13 +50,13 @@ export default function CreateCollector() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const isInvalid = !formData.distributorId || !formData.code || !formData.name;
+        const isInvalid = !formData.providerId || !formData.code || !formData.name;
         if (isInvalid) {
             toast.error(t('err_field_required'));
             return;
         }
         createMutation.mutate({
-            distributor_id: formData.distributorId,
+            provider_id: formData.providerId,
             code: formData.code,
             name: formData.name
         }, {
@@ -84,15 +84,15 @@ export default function CreateCollector() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col gap-1.5 mt-1">
                             <label className="text-sm text-gray-700">
-                                <span className="text-red-500 mr-1">*</span>{t('distributor_ins')}
+                                <span className="text-red-500 mr-1">*</span>{t('agency_name')}
                             </label>
                            <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.distributorId || undefined} 
-                                onChange={(value) => handleValueChange("distributorId", value)}
-                                options={distributors.map((distributor: any) => ({
-                                    value: distributor.id,
-                                    label: `${distributor.code}_${distributor.name}`,
+                                value={formData.providerId || undefined} 
+                                onChange={(value) => handleValueChange("providerId", value)}
+                                options={providers && providers.map((provider: any) => ({
+                                    value: provider.id,
+                                    label: provider.name,
                                 }))}
                             />
                         </div>
@@ -119,7 +119,7 @@ export default function CreateCollector() {
                     </div>
                 </form>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoadProviders} />
         </div>
     );
 }

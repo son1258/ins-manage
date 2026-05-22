@@ -1,12 +1,13 @@
 import dayjs from "dayjs";
 
 export const formatVND = (amount: number | string) => {
-    const value = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(value)) return "0";
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-    }).format(value);
+    if (amount === "" || amount === null || amount === undefined) return "";
+    const cleaned = typeof amount === 'string' 
+        ? amount.replace(/\./g, "").replace(/[^0-9]/g, "") 
+        : amount;
+    const value = typeof cleaned === 'string' ? parseFloat(cleaned) : cleaned;
+    if (isNaN(value)) return "";
+    return new Intl.NumberFormat('vi-VN').format(value);
 };
 
 export const calculateEndDate = (startDate: any, rangeTime: any, time: any) => {
@@ -21,3 +22,7 @@ export const calculateEndDate = (startDate: any, rangeTime: any, time: any) => {
             break;
     }
 }
+
+export const validateNumericField = (value: string, length: number) => {
+    return /^\d+$/.test(value) && value.length === length;
+};

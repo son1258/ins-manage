@@ -28,8 +28,7 @@ const Navbar = () => {
             <div className="flex items-center gap-5">
                 <LanguageSwitcher />
                 <div
-                    onClick={() => router.push(`/${locale}/dashboard/user`)}
-                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-all border-l pl-4 border-gray-200">
+                    className="flex items-center gap-2 hover:bg-gray-50 p-1 rounded transition-all border-l pl-4 border-gray-200">
                     <div className="flex items-center gap-2">
                         <span className="text-[13px] font-bold text-gray-700 uppercase whitespace-nowrap">{username}</span>
                     </div>

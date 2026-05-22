@@ -42,6 +42,10 @@ export default function CustomSelect({
         }}
     >
         <Select
+            showSearch={{
+                optionFilterProp: 'label',
+                filterSort: (option) => option?.label
+            }}
             mode={mode}
             maxTagCount="responsive"
             value={value}

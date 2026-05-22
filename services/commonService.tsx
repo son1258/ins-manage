@@ -17,3 +17,9 @@ export const loadProducts = (token: string) => {
     const resp = callApi(url, 'GET', {}, 'v1', token);
     return resp; 
 }
+
+export const loadCountries = (token: string) => {
+    const url = "countries";
+    const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
+}

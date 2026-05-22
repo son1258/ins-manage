@@ -59,7 +59,7 @@ export default function DatePickerCustom({
                     disabled={readOnly}
                     placeholder={placeholder}
                     format={format || "DD-MM-YYYY"}
-                    className="w-full h-8 custom-date-picker"
+                    className={`w-full h-8 custom-date-picker ${readOnly ? 'bg-gray-200' : 'bg-white'}`}
                     disabledDate={conditionDate}
                     defaultPickerValue={defaultValue}                    
                     showNow={false}

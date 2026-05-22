@@ -1,4 +1,4 @@
-import { loadEthinicities, loadProducts, loadProvinces } from "@/services/commonService"
+import { loadCountries, loadEthinicities, loadProducts, loadProvinces } from "@/services/commonService"
 import { useQuery } from "@tanstack/react-query"
 
 export const useProvinceList = (token: string) => {
@@ -21,6 +21,14 @@ export const useProductList = (token: string) => {
 	return useQuery({
 		queryKey: ['products'],
 		queryFn: () => loadProducts(token),
+		enabled: !!token
+	})
+}
+
+export const useCountries = (token: string) => {
+	return useQuery({
+		queryKey: ['countries'],
+		queryFn: () => loadCountries(token),
 		enabled: !!token
 	})
 }
