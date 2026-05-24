@@ -63,7 +63,7 @@ export default function CreateNewDistributor() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const isInvalid = !formData.providerId || !formData.distributorCode || !formData.distributorName || formData.productIds.length === 0 || formData.catalogIds.length === 0;
+        const isInvalid = !formData.providerId || !formData.distributorCode.trim() || !formData.distributorName.trim() || formData.productIds.length === 0 || formData.catalogIds.length === 0;
         if (isInvalid) {
             toast.error(t('err_field_required'));
             return;

@@ -46,8 +46,10 @@ export default function Payment() {
     const [isLoadingConfirm, startTransition] = useTransition();
 
     const status = [
+        {code: PAYMENT_STATUS.RECORDED, name: t('record')},
         {code: PAYMENT_STATUS.PAID, name: t('paid')},
-        {code: PAYMENT_STATUS.RECORDED, name: t('pending_payment')},
+        {code: PAYMENT_STATUS.WAIT_PAID, name: t('pending_payment')},
+        {code: PAYMENT_STATUS.CANCEL, name: t('cancel')}
     ]
 
     const declarations = [
@@ -228,6 +230,7 @@ export default function Payment() {
                             toDate={formData.toDate}
                             fieldFrom="fromDate"
                             fieldTo="toDate"
+                            format={"DD/MM/YYYY"}
                             onChange={handleValueChange}
                         />
                     </div>
@@ -258,9 +261,9 @@ export default function Payment() {
                         </div>
                         
                         <div className="flex gap-2 mt-2 md:mt-0">
-                            <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 transition-colors">
+                            {/* <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 transition-colors">
                                 <FontAwesomeIcon icon={faFileAlt} />{t('download_file')}
-                            </button>
+                            </button> */}
                             <button 
                                 onClick={() => router.push(`/${locale}/dashboard/payment/create-payment`)}
                                 className="flex items-center gap-2 bg-gray-800 text-white px-2 py-1 text-xs cursor-pointer">

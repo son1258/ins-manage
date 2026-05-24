@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faEdit, faTrashAlt, faSync, faBolt, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -14,7 +14,9 @@ import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import CustomSelect from '@/components/CustomSelect';
 import Modal from '@/components/Modal';
-import { useDisableUser, useUserList } from '@/hooks/useUser';
+import { useDisableUser, useUpdateUserMutation, useUserList } from '@/hooks/useUser';
+import { toast } from 'react-toastify';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default function User() {
     const t = useTranslations();
@@ -27,8 +29,8 @@ export default function User() {
     const [selectedUser, setSelectedUser] = useState<any>();
     const [openModal, setOpenModal] = useState(false);
     const listStatus = [
-        {code: STATUS.ACTIVE, name: t('active')},
-        {code: STATUS.DEACTIVE, name: t('deactive')},
+        { code: STATUS.ACTIVE, name: t('active') },
+        { code: STATUS.DEACTIVE, name: t('deactive') },
     ];
 
     const defaultParams = {
@@ -36,7 +38,7 @@ export default function User() {
         fullname: "",
         status: STATUS.ACTIVE,
         page: 1,
-        limit: 10 
+        limit: 10
     }
 
     const page = Number(searchParams.get('page')) || 1;
@@ -51,13 +53,14 @@ export default function User() {
     }
 
     const [formData, setFormData] = useState(params);
-    const {data, isLoading, isError} : any = useUserList(params, accessToken);
+    const { data, isLoading, isError }: any = useUserList(params, accessToken);
     const users = isError ? [] : (data?.data || []);
     const disableMutation = useDisableUser(accessToken, t);
+    const updateUser = useUpdateUserMutation(accessToken);
 
     useEffect(() => {
         dispatch(setActiveTitle(t('user')))
-    },[t])
+    }, [t])
 
     const createNew = () => {
         router.push(`/${locale}/dashboard/user/create-new`)
@@ -108,6 +111,23 @@ export default function User() {
         router.push(`${pathname}?${p.toString()}`);
     }
 
+    const handleUpdateStatus = (user: any) => {
+        updateUser.mutate(
+            {
+                id: user.id,
+                status: STATUS.ACTIVE
+            },
+            {
+                onSuccess: () => {
+                    toast.success(t('success'))
+                },
+                onError: (err) => {
+                    handleApiError(err, t)
+                }
+            }
+        )
+    }
+
     const handleSelectDisableUser = (item: any) => {
         setOpenModal(!openModal);
         setSelectedUser(item);
@@ -129,7 +149,7 @@ export default function User() {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_user')}</h2>
                 <button
-                    onClick={createNew} 
+                    onClick={createNew}
                     className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-xs md:text-sm">
                     <FontAwesomeIcon icon={faPlus} /> {t('add_user')}
                 </button>
@@ -139,22 +159,22 @@ export default function User() {
                 <form onSubmit={handleSearch}>
                     <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mb-6">
-                             <InputGroup 
+                            <InputGroup
                                 label={t('user_code')}
                                 value={formData.username}
-                                onChange={(e)=>handleValueChange("username", e.target.value)} 
+                                onChange={(e) => handleValueChange("username", e.target.value)}
                             />
-                             <InputGroup 
+                            <InputGroup
                                 label={t('fullname')}
                                 value={formData.fullname}
-                                onChange={(e)=>handleValueChange("fullname", e.target.value)} 
+                                onChange={(e) => handleValueChange("fullname", e.target.value)}
                             />
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-medium mb-1 text-gray-600">{t('status')}</label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.status} 
+                                    value={formData.status}
                                     onChange={(value) => handleValueChange("status", value)}
                                     options={listStatus.map((status: any) => ({
                                         value: status.code,
@@ -167,13 +187,13 @@ export default function User() {
                         <div className="flex justify-end items-center gap-4 pt-2">
                             <button
                                 type="button"
-                                onClick={handleRefresh} 
+                                onClick={handleRefresh}
                                 className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                                 <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                                 {t('refresh')}
                             </button>
                             <button
-                                type="submit" 
+                                type="submit"
                                 className="flex items-center bg-gray-800 border border-gray-800 text-white px-2 py-1 rounded transition-all text-sm font-semibold shadow-sm cursor-pointer">
                                 <FontAwesomeIcon icon={faSearch} className="mr-2 w-3 h-3" />
                                 {t('search')}
@@ -201,24 +221,33 @@ export default function User() {
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{user.username}</td>
                                         <td className="px-4 py-3 text-gray-700">{user.fullname}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                                                user.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
-                                            }`}>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${user.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
+                                                }`}>
                                                 {user.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
-                                            <button 
-                                                onClick={() => router.push(`/${locale}/dashboard/user/${user.id}`)}
-                                                className="hover:text-blue-600 transition-colors cursor-pointer"
-                                            >
-                                                <FontAwesomeIcon icon={faEdit} />
-                                            </button>
-                                            {user.status == STATUS.ACTIVE && (
-                                                <button 
-                                                    onClick={() => handleSelectDisableUser(user)}
-                                                    className="hover:text-red-600 transition-colors">
+                                            {user.status == STATUS.ACTIVE ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => router.push(`/${locale}/dashboard/user/${user.id}`)}
+                                                        className="hover:text-blue-600 transition-colors cursor-pointer"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSelectDisableUser(user)}
+                                                        className="hover:text-red-600 transition-colors">
                                                         <FontAwesomeIcon icon={faTrashAlt} />
+                                                    </button>
+                                                </>
+
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleUpdateStatus(user)}
+                                                    className="hover:text-blue-600 transition-colors cursor-pointer"
+                                                >
+                                                    <FontAwesomeIcon icon={faArrowsRotate} />
                                                 </button>
                                             )}
                                         </td>
@@ -236,13 +265,13 @@ export default function User() {
                     />
                 </div>
             </div>
-            <Modal 
-                isOpen={openModal} 
-                title={t('disable_user')} 
-                onConfirm={onConfirmDisable} 
-                onClose={() => setOpenModal(false)} 
+            <Modal
+                isOpen={openModal}
+                title={t('disable_user')}
+                onConfirm={onConfirmDisable}
+                onClose={() => setOpenModal(false)}
             />
             <Loading stateShow={isLoading || disableMutation.isPending} />
         </div>
-  );
+    );
 }

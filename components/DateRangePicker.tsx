@@ -18,6 +18,7 @@ interface Props {
     required?: boolean;
     readOnly?: boolean;
     className?: string;
+    format?: any;
 }
 
 export default function DateRangePicker({
@@ -31,6 +32,7 @@ export default function DateRangePicker({
     required = false,
     readOnly = false,
     className = "",
+    format = ""
 }: Props) {
     const formatMap = {
         date: "YYYY-MM-DD",
@@ -70,7 +72,7 @@ export default function DateRangePicker({
                     allowClear={false}
                     onChange={handleRangeChange}
                     disabled={readOnly}
-                    format="DD/MM/YYYY"
+                    format={format}
                     className="w-full h-8 custom-range-picker"
                 />
             </div>

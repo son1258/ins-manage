@@ -3,7 +3,7 @@
 import FormSection from "@/components/FormSection";
 import InputGroup from "@/components/InputGroup";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Cookies from "js-cookie";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -30,25 +30,35 @@ import { useOrderDetail, useUpdateOrderDetail } from "@/hooks/useOrder";
 import CustomSelect from "@/components/CustomSelect";
 import InputWithAffix from "@/components/InputWithAffix";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faSave } from "@fortawesome/free-solid-svg-icons";
+import { faClose, faPlus, faSave, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "antd";
+import Modal from '@/components/Modal';
 import { toast } from "react-toastify";
 import { handleApiError } from "@/utils/errorHandler";
+import { removeImageOrder } from "@/services/orderService";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function OrderDetail() {
 	const t = useTranslations();
 	const params: any = useParams();
 	const dispatch = useDispatch();
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const accessToken = Cookies.get("accessToken") || "";
 	const [isBHXH, setIsBHXH] = useState(false);
 	const [plans, setPlans] = useState<any>();
 	const [families, setFamilies] = useState<any>();
 	const [modalAddMember, setModalAddMember] = useState(false);
+	const [isRemoveMember, setIsRemoveMember] = useState(false);
+	const [memberSelected, setMemberSelected] = useState<any>();
+	const [isRemoveImg, setIsRemoveImg] = useState(false);
+	const [imgSelected, setImgSelected] = useState<any>();
 	const [dateType, setDateType] = useState<"date" | "month" | "year">("date");
+	const [isLoadingState, startTransition] = useTransition();
 	const [formErrors, setFormErrros] = useState({
 		socialCode: false,
-		hospital: false
+		hospital: false,
+		socialCodeAddMember: false,
 	})
 
 	const genders = [
@@ -99,6 +109,7 @@ export default function OrderDetail() {
 
 	const [formData, setFormData] = useState<any>({
 		id: "",
+		attachments: [],
 		status: "",
 		collectorCode: "",
 		socialCode: "",
@@ -222,6 +233,14 @@ export default function OrderDetail() {
 	};
 
 	const handleFormAddMemberChange = (nameField: string, value: any) => {
+		if (nameField === "socialCode") {
+			const errSocialCode = validateNumericField(value, 10);
+			setFormErrros((prev) => ({
+				...prev,
+				socialCodeAddMember: !errSocialCode,
+			}))
+		}
+
 		setFormAddMember((prev: any) => ({
 			...prev,
 			[nameField]: value
@@ -232,27 +251,44 @@ export default function OrderDetail() {
 		setModalAddMember(false);
 	}
 
+	const handleRemoveMember = (index: number) => {
+		setIsRemoveMember(true);
+		setMemberSelected(index);
+	}
+
+	const onConfirmRemoveMember = () => {
+		setFamilies((prev: any) => ({
+			...prev,
+			thanh_vien: prev.thanh_vien.filter((_: any, idx: number) => idx !== memberSelected)
+		}))
+		setIsRemoveMember(false);
+	}
+
 	const handleSubmitAddMember = (e: React.FormEvent) => {
 		e.preventDefault();
-		const isInvalid = !formAddMember.fullname || !formAddMember.birthday || !formAddMember.relationshipWithHouseHead || !formAddMember.address
+		const isInvalid = !formAddMember.fullname.trim() || !formAddMember.birthday || !formAddMember.relationshipWithHouseHead || !formAddMember.address.trim()
 			|| !formAddMember.ethnicity || !formAddMember.nationality || !formAddMember.gender || !formAddMember.birthRegisterAddress
 		if (isInvalid) {
 			toast.error(t('err_field_required'));
+			return;
+		} else if (formErrors.socialCodeAddMember) {
+			toast.error(t('err_check_form'));
+			return;
 		}
 		const dataMember = {
 			stt: families.thanh_vien.length + 1,
 			ho_ten: formAddMember.fullname,
 			maso_bhxh: formAddMember.socialCode,
-			ngay_sinh: formAddMember.birthday,
+			ngay_sinh: dayjs(formAddMember.birthday).format("DD/MM/YYYY"),
 			gioi_tinh: formAddMember.gender,
 			dan_toc: formAddMember.ethnicity,
 			quoc_tich: formAddMember.nationality,
-			matinh_ks: "",
+			matinh_ks: formAddMember.birthRegisterAddress,
 			mahuyen_ks: "",
 			maxa_ks: "",
 			moi_quan_he: formAddMember.relationshipWithHouseHead,
 			cmnd: formAddMember.nic,
-			diachi_dkks: formAddMember.birthRegisterAddress,
+			diachi_dkks: formAddMember.address,
 			ghichu: formAddMember.note,
 			ccns: 0,
 			nguoi_tham_gia: families.thanh_vien.length + 1,
@@ -274,6 +310,33 @@ export default function OrderDetail() {
 
 	const getDocumentType = (value: string) => {
 		return DOCUMENT_TYPES.find(type => type.value == value)?.label || t('other')
+	}
+
+	const getNationalName = (value: string) => {
+		if (!countries) return;
+		return countries.find((country: any) => country.code == value.toUpperCase())?.name || t('other')
+	}
+
+	const onConfirmRemoveImg = () => {
+		if (!accessToken) return;
+		startTransition(async () => {
+			try {
+				const resp = await removeImageOrder({ id: imgSelected.id }, accessToken);
+				if (resp && resp.success) {
+					toast.success(t('success'));
+					setIsRemoveImg(false);
+					setImgSelected(null);
+					queryClient.invalidateQueries({ queryKey: ['order-detail', params.id] });
+				}
+			} catch (err) {
+				handleApiError(err, t)
+			}
+		})
+	}
+
+	const handleRemoveImage = (dataImange: any) => {
+		setIsRemoveImg(true);
+		setImgSelected(dataImange);
 	}
 
 	const buildD03 = (formData: any) => ({
@@ -457,6 +520,7 @@ export default function OrderDetail() {
 
 			const data = {
 				id: order.id,
+				attachments: order.attachments,
 				status: order.status,
 				collectorCode: isBHXH ? order.data.d05_ts.noi_dung[0].ma_nhanvien_thu : order.data.d03_ts.noi_dung[0].ma_nhanvien_thu,
 				socialCode: order.ld_maso_bhxh,
@@ -915,6 +979,46 @@ export default function OrderDetail() {
 									onChange={(e) => handleFormDataChange("note", e.target.value)}
 								/>
 							</div>
+							<div className="md:col-span-4 col-span-2">
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									{t("images")}
+								</label>
+								{formData.attachments && formData.attachments.length > 0 && (
+									<div className="mt-3 flex gap-3 overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+										{formData.attachments.map((img: any) => (
+											<div
+												key={img.id}
+												className="relative group flex-shrink-0 w-32 h-32 rounded-lg overflow-hidden border border-gray-200 shadow-sm"
+											>
+												<a href={img.url_file} target="_blank">
+													<img
+														src={img.url_file}
+														alt={`image-${img.id}`}
+														className="w-full h-full object-contain"
+													/>
+													<button
+														type="button"
+														onClick={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+															handleRemoveImage(img);
+														}}
+														className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md"
+													>
+														<FontAwesomeIcon icon={faClose} />
+													</button>
+												</a>
+											</div>
+										))}
+									</div>
+								)}
+								<Modal
+									isOpen={isRemoveImg}
+									title={t('remove_img')}
+									onConfirm={onConfirmRemoveImg}
+									onClose={() => setIsRemoveImg(false)}
+								/>
+							</div>
 						</FormSection>
 					</div>
 					{families && families.thanh_vien.length > 0 && (
@@ -980,6 +1084,9 @@ export default function OrderDetail() {
 											<th className="p-2 border border-blue-800 font-semibold">
 												{t("ethnicity")}
 											</th>
+											<th className="p-2 border border-blue-800 font-semibold">
+												{t("action")}
+											</th>
 										</tr>
 									</thead>
 									<tbody className="text-[12px] text-gray-700">
@@ -1029,18 +1136,29 @@ export default function OrderDetail() {
 														{member.diachi_dkks}
 													</td>
 													<td className="p-2 border-r border-gray-200">
-														{member.quoc_tich.toUpperCase() == NATIONAL.VN.toUpperCase()
-															? t("national_vn")
-															: t("other")}
+														{getNationalName(member.quoc_tich)}
 													</td>
 													<td className="p-2 border-r border-gray-200">
 														{getNameEthnicity(member.dan_toc)}
+													</td>
+													<td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
+														<button
+															onClick={() => handleRemoveMember(index)}
+															className="hover:text-red-600 transition-colors">
+															<FontAwesomeIcon icon={faTrashAlt} />
+														</button>
 													</td>
 												</tr>
 											))}
 									</tbody>
 								</table>
 							</div>
+							<Modal
+								isOpen={isRemoveMember}
+								title={t('remove_member')}
+								onConfirm={onConfirmRemoveMember}
+								onClose={() => setIsRemoveMember(false)}
+							/>
 						</>
 					)}
 					{modalAddMember && (
@@ -1144,17 +1262,23 @@ export default function OrderDetail() {
 												}))}
 											/>
 										</div>
-										<InputGroup
-											label={t("place_of_birth_registration")}
-											className="md:col-span-2 col-span-full"
-											value={formAddMember.birthRegisterAddress}
-											onChange={(e) => handleFormAddMemberChange("birthRegisterAddress", e.target.value)}
-											required
-										/>
+										<div className="flex flex-col gap-1.5 md:col-span-1 col-span-2">
+											<label className="text-sm mb-1 font-medium text-gray-600">{t('place_of_birth_registration')}</label>
+											<CustomSelect
+												placeholder={t('select_option')}
+												value={formAddMember.birthRegisterAddress}
+												onChange={(value) => handleFormAddMemberChange("birthRegisterAddress", value)}
+												options={provinces && provinces.map((province: any) => ({
+													value: province.code,
+													label: province.name,
+												}))}
+											/>
+										</div>
 										<InputGroup
 											label={t("social_code")}
 											value={formAddMember.socialCode}
 											onChange={(e) => handleFormAddMemberChange("socialCode", e.target.value)}
+											isError={formErrors.socialCodeAddMember}
 										/>
 										<InputGroup
 											label={t("nic")}
@@ -1217,7 +1341,7 @@ export default function OrderDetail() {
 					)}
 				</>
 			)}
-			<Loading stateShow={isLoadProvinces || isLoadCountries || isLoadEthnicities || isLoadOrderDetail} />
+			<Loading stateShow={isLoadingState || isLoadProvinces || isLoadCountries || isLoadEthnicities || isLoadOrderDetail} />
 		</div>
 	);
 }

@@ -257,5 +257,8 @@
     "record_submitted": "Tờ khai đã gửi hồ sơ",
     "approved_by_social_ins": "Tờ khai đã được cơ quan BHXH chấp nhận",
     "return_by_social_ins": "Tờ khai bị trả lại",
-    "cancelled": "Tờ khai bị huỷ"
+    "cancelled": "Tờ khai bị huỷ",
+    "images": "Ảnh đính kèm",
+    "remove_img": "Bạn có muốn xoá ảnh này không?",
+    "remove_member": "Bạn có muốn xoá người này không?"
 }
