@@ -1,4 +1,4 @@
-import { loadOrderById, loadOrders, upDateOrder } from "@/services/orderService"
+import { loadOrderById, loadOrders, removeImageOrder, upDateOrder } from "@/services/orderService"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 export const useOrderList = (params: any, token: string) => {
@@ -15,7 +15,7 @@ export const useOrderDetail = (id: string, token: string) => {
 		queryFn: () => loadOrderById(id, token),
 		enabled: !!token
 	})
-} 
+}
 
 export const useUpdateOrderDetail = (token: string) => {
 	const queryClient = useQueryClient();

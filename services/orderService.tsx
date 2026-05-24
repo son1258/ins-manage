@@ -39,6 +39,15 @@ export const loadOrders = (params: any, token: string) => {
     if (params.providerStatus != null) {
         queryParams.push(`provider_order_status=${params.providerStatus}`)
     }
+    if (params.billingDate) {
+        queryParams.push(`billing_date=${params.billingDate}`)
+    }
+    if (params.fromOrderDate) {
+        queryParams.push(`from_order_date=${params.fromOrderDate}`)
+    }
+        if (params.toOrderDate) {
+        queryParams.push(`to_order_date=${params.toOrderDate}`)
+    }
 
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
@@ -125,5 +134,11 @@ export const downloadFileExcel = (params: any, token: string) => {
         url += `?${queryParams.join("&")}`
     }
     const resp = callApi(url, 'GET', {}, 'v1', token);
+    return resp;
+}
+
+export const removeImageOrder = (data: any, token: string) => {
+    const url = "dvc/order/attachment/delete";
+    const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }

@@ -19,6 +19,7 @@ import DateRangePicker from '@/components/DateRangePicker';
 import { formatVND } from '@/utils/common';
 import { useOrderList } from '@/hooks/useOrder';
 import { downloadFileExcel } from '@/services/orderService';
+import DatePickerCustom from '@/components/DatePicker';
 
 export default function Declarations() {
     const t = useTranslations();
@@ -32,26 +33,22 @@ export default function Declarations() {
     const from = today.subtract(6, "day");
     const [selectedDeclaration, setSelectedDeclaration] = useState(SERVICE_CODE.BHXH);
     const [isLoadingState, startTransition] = useTransition();
+    const [plans, setPlans] = useState<any[]>([]);
+    const [isBHXH, setIsBHXH] = useState(false);
 
     const declarations = [
         { code: SERVICE_CODE.BHXH, name: t('social_ins'), acronym: "bhxh" },
         { code: SERVICE_CODE.BHYT, name: t('family_health_ins'), acronym: "bhythgd" },
     ]
 
-    const plans = {
-        bhxh: [
-            { code: PLANS.NEXT_PAYMENT, name: t('next_payment') },
-            { code: PLANS.NEW, name: t('new') },
-            { code: PLANS.DECREASE, name: t('decrease') },
-            { code: PLANS.REPAY, name: t('repay') },
-            { code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment') },
-        ],
-        bhythgd: [
-            { code: PLANS.RENEWAL, name: t('renewal') },
-            { code: PLANS.NEW, name: t('new') },
-            { code: PLANS.DECREASE, name: t('decrease') },
-        ]
-    }
+    const totalPlans = [
+        { code: PLANS.RENEWAL, name: t('renewal') },
+        { code: PLANS.NEW, name: t('new') },
+        { code: PLANS.NEXT_PAYMENT, name: t('next_payment') },
+        { code: PLANS.DECREASE, name: t('decrease') },
+        { code: PLANS.REPAY, name: t('repay') },
+        { code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment') },
+    ];
 
     const internalStatus = [
         { code: INTERNAL_STATUS.RECORD, name: t('record') },
@@ -78,30 +75,24 @@ export default function Declarations() {
 
     const page = Number(searchParams.get('page')) || 1;
     const limit = Number(searchParams.get('limit')) || 10;
-    const statusParam = searchParams.get('status') != null ? Number(searchParams.get('status')) : "";
-    const socialStatusParam = searchParams.get('provider_order_status') != null ? Number(searchParams.get('provider_order_status')) : "";
-    const serviceCodeParam = searchParams.get('service_code') != null ? Number(searchParams.get('service_code')) : SERVICE_CODE.BHXH;
-    const medicalParam = searchParams.get('medical_code') != null ? Number(searchParams.get('medical_code')) : "";
-    const customerParam = searchParams.get('customer_name') != null ? searchParams.get('customer_name') : "";
     const params = {
         limit: limit,
         page: page,
-        serviceCode: serviceCodeParam,
-        medicalCode: medicalParam,
-        customerName: customerParam,
-        customerPhone: "",
-        providerStatus: socialStatusParam,
-        status: statusParam,
-        plan: "",
-        fromDate: from.format("YYYY-MM-DD"),
-        toDate: today.format("YYYY-MM-DD"),
-        receiptFromDate: "",
-        receiptToDate: "",
-        fromMonth: "",
-        toMonth: ""
+        serviceCode: searchParams.get('service_code') || "",
+        medicalCode: searchParams.get('medical_code') || "",
+        customerName: searchParams.get('customer_name') || "",
+        customerPhone: searchParams.get('customer_phone') || "",
+        providerStatus: searchParams.get('provider_order_status') || "",
+        status: searchParams.get('status') || "",
+        plan: searchParams.get('plan') || "",
+        fromDate: searchParams.get('from_date') || from.format("YYYY-MM-DD"),
+        toDate: searchParams.get('to_date') || today.format("YYYY-MM-DD"),
+        billingDate: searchParams.get('billing_date') || "",
+        fromOrderDate: searchParams.get('from_order_date') || "",
+        toOrderDate: searchParams.get('to_order_date') || ""
     }
 
-    const defaultParams = {
+    const defaultParams: any = {
         limit: 10,
         page: 1,
         serviceCode: SERVICE_CODE.BHXH,
@@ -113,10 +104,9 @@ export default function Declarations() {
         plan: "",
         fromDate: from.format("YYYY-MM-DD"),
         toDate: today.format("YYYY-MM-DD"),
-        receiptFromDate: "",
-        receiptToDate: "",
-        fromMonth: "",
-        toMonth: ""
+        billingDate: "",
+        fromOrderDate: "",
+        toOrderDate: ""
     }
 
     const [formData, setFormData] = useState(params);
@@ -132,12 +122,7 @@ export default function Declarations() {
     }
 
     const getPlanLabel = (order: any) => {
-        let findPlan;
-        if (order.service_code == SERVICE_CODE.BHXH) {
-            findPlan = plans.bhxh.find((plan) => plan.code == order.ld_pa);
-        } else {
-            findPlan = plans.bhythgd.find((plan) => plan.code == order.ld_pa);
-        }
+        let findPlan = totalPlans.find((plan) => plan.code == order.ld_pa);
         return findPlan?.name
     }
 
@@ -146,10 +131,19 @@ export default function Declarations() {
             setSelectedDeclaration(value);
         }
 
-        setFormData((prev: any) => ({
-            ...prev,
-            [nameField]: value
-        }))
+        setFormData((prev: any) => {
+            let newValue = value;
+
+            if (nameField === "fromOrderDate" && isBHXH && value) {
+                newValue = dayjs(value).startOf('month').format("YYYY-MM-DD");
+            }
+            if (nameField === "toOrderDate" && isBHXH && value) {
+                newValue = dayjs(value).endOf('month').format("YYYY-MM-DD");
+            }
+
+            return { ...prev, [nameField]: newValue };
+        });
+
     }
 
     const handleSearch = (e: React.FormEvent) => {
@@ -177,6 +171,15 @@ export default function Declarations() {
         }
         if (formData.customerPhone) {
             newParams.set('customer_phone', formData.customerPhone);
+        }
+        if (formData.billingDate) {
+            newParams.set('billing_date', String(formData.billingDate));
+        }
+        if (formData.fromOrderDate) {
+            newParams.set('from_order_date', String(formData.fromOrderDate));
+        }
+        if (formData.toOrderDate) {
+            newParams.set('to_order_date', String(formData.toOrderDate));
         }
         router.push(`${pathname}?${newParams.toString()}`);
     }
@@ -219,7 +222,12 @@ export default function Declarations() {
             const resp = await downloadFileExcel(formData, accessToken);
             if (resp && resp.success) {
                 const url = resp.data.download_url;
-                window.open(url, "_blank");
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'orders-report';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
         });
     };
@@ -227,6 +235,35 @@ export default function Declarations() {
     useEffect(() => {
         dispatch(setActiveTitle(t('list_declaration')));
     }, [t])
+
+    useEffect(() => {
+        if (!formData.serviceCode) return;
+        let listPlans;
+        let state;
+        if (Number(formData.serviceCode) === SERVICE_CODE.BHXH) {
+            state = true;
+            listPlans = [
+                { code: PLANS.NEXT_PAYMENT, name: t('next_payment') },
+                { code: PLANS.NEW, name: t('new') },
+                { code: PLANS.DECREASE, name: t('decrease') },
+                { code: PLANS.REPAY, name: t('repay') },
+                { code: PLANS.MAKE_UP_PAYMENT, name: t('make_up_payment') },
+            ]
+        } else {
+            state = false;
+            listPlans = [
+                { code: PLANS.RENEWAL, name: t('renewal') },
+                { code: PLANS.NEW, name: t('new') },
+                { code: PLANS.DECREASE, name: t('decrease') },
+            ]
+        }
+        setIsBHXH(state);
+        setPlans(listPlans);
+        setFormData((prev: any) => ({
+            ...defaultParams,
+            serviceCode: Number(prev.serviceCode)
+        }));
+    }, [formData.serviceCode])
 
     return (
         <div className="flex flex-col gap-3 text-black pb-4 w-full">
@@ -289,7 +326,7 @@ export default function Declarations() {
                                 placeholder={t('select_option')}
                                 value={formData.plan || undefined}
                                 onChange={(value) => handleValueChange("plan", value)}
-                                options={(selectedDeclaration == SERVICE_CODE.BHXH ? plans.bhxh : plans.bhythgd).map((type: any) => ({
+                                options={plans.map((type: any) => ({
                                     value: type.code,
                                     label: type.name,
                                 }))}
@@ -302,16 +339,15 @@ export default function Declarations() {
                             toDate={formData.toDate}
                             fieldFrom="fromDate"
                             fieldTo="toDate"
+                            format={"DD/MM/YYYY"}
                             onChange={handleValueChange}
                         />
-
-                        <DateRangePicker
-                            label={t('receipt_date')}
-                            fromDate={formData.receiptFromDate}
-                            toDate={formData.receiptFromDate}
-                            fieldFrom="receiptFromDate"
-                            fieldTo="receiptToDate"
-                            onChange={handleValueChange}
+                        <DatePickerCustom
+                            label={t("receipt_date")}
+                            value={formData.billingDate}
+                            placeholder="DD/MM/YYYY"
+                            format={"DD/MM/YYYY"}
+                            onChange={(value) => handleValueChange("billingDate", value)}
                         />
                         {formData.serviceCode && (
                             <>
@@ -319,15 +355,21 @@ export default function Declarations() {
                                     <DateRangePicker
                                         picker={"month"}
                                         label={t('from_month')}
-                                        fromDate={formData.receiptFromDate}
-                                        toDate={formData.receiptFromDate}
+                                        fromDate={formData.fromOrderDate}
+                                        toDate={formData.toOrderDate}
+                                        fieldFrom="fromOrderDate"
+                                        fieldTo="toOrderDate"
+                                        format={"MM/YYYY"}
                                         onChange={handleValueChange}
                                     />
                                 ) : (
                                     <DateRangePicker
                                         label={t('from_date_card_ins')}
-                                        fromDate={formData.receiptFromDate}
-                                        toDate={formData.receiptFromDate}
+                                        fromDate={formData.fromOrderDate}
+                                        toDate={formData.toOrderDate}
+                                        fieldFrom="fromOrderDate"
+                                        fieldTo="toOrderDate"
+                                        format={"DD/MM/YYYY"}
                                         onChange={handleValueChange}
                                     />
                                 )}
@@ -385,9 +427,9 @@ export default function Declarations() {
                                         <th className="px-4 py-3 border-r border-white text-left">{t('partner_payment_status')}</th>
                                         <th className="px-4 py-3 border-r border-white text-left">{t('cancellation_reason')}</th>
                                         <th className="px-4 py-3 border-r border-white text-left">
-                                            {(formData.serviceCode == SERVICE_CODE.BHXH) ? t('from_month') : t('from_date_card')}
+                                            {(Number(formData.serviceCode) === SERVICE_CODE.BHXH) ? t('from_month') : t('from_date_card')}
                                         </th>
-                                        {formData.serviceCode != SERVICE_CODE.BHXH ? (
+                                        {Number(formData.serviceCode) !== SERVICE_CODE.BHXH ? (
                                             <th className="px-4 py-3 border-r border-white text-left">
                                                 {t('house_medical_amount')}
                                             </th>
@@ -395,10 +437,10 @@ export default function Declarations() {
                                             <></>
                                         )}
                                         <th className="px-4 py-3 border-r border-white text-left">
-                                            {formData.serviceCode == SERVICE_CODE.BHXH ? t('social_amount') : t('medical_amount')}
+                                            {Number(formData.serviceCode) === SERVICE_CODE.BHXH ? t('social_amount') : t('medical_amount')}
                                         </th>
                                         <th className="px-4 py-3 border-r border-white text-right">
-                                            {formData.serviceCode == SERVICE_CODE.BHXH ? t('contribution_amount') : t('medical_ins_amount')}
+                                            {Number(formData.serviceCode) === SERVICE_CODE.BHXH ? t('contribution_amount') : t('medical_ins_amount')}
                                         </th>
                                     </tr>
                                 </thead>
@@ -444,7 +486,7 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">
                                                 {getDateViaServiceCode(order.service_code, order.start_date)}
                                             </td>
-                                            {formData.serviceCode != SERVICE_CODE.BHXH ? (
+                                            {Number(formData.serviceCode) != SERVICE_CODE.BHXH ? (
                                                 <td className="px-4 py-3 border-r border-white text-left">100</td>
                                             ) : (<></>)}
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>

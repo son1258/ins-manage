@@ -10,8 +10,6 @@ import Cookies from 'js-cookie';
 import Loading from '@/components/Loading';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
-import { STATUS } from '@/constants';
-import { useDistributorList } from '@/hooks/useDistributor';
 import { useCreateCollectorMutation } from '@/hooks/useCollector';
 import { useProviderList } from '@/hooks/useProvider';
 
@@ -50,7 +48,7 @@ export default function CreateCollector() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const isInvalid = !formData.providerId || !formData.code || !formData.name;
+        const isInvalid = !formData.providerId || !formData.code.trim() || !formData.name.trim();
         if (isInvalid) {
             toast.error(t('err_field_required'));
             return;

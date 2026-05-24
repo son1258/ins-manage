@@ -75,7 +75,7 @@ export default function CreateCollector() {
  
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const isInvalid = !formData.username || !formData.password || !formData.fullname || !formData.email || formData.collectorIds.length === 0
+        const isInvalid = !formData.username.trim() || !formData.password.trim() || !formData.fullname.trim()|| !formData.email.trim() || formData.collectorIds.length === 0
         if (isInvalid) {
             toast.error(t('err_field_required'));
             return;
