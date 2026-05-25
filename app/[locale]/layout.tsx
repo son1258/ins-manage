@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import AppProviders from "@/components/AppProvider";
+import Script from "next/script";
 
 config.autoAddCss = false;
 
@@ -29,6 +30,7 @@ export default async function LocaleLayout({children, params}: Props) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
+        <Script src="/runtime-config.js" strategy="beforeInteractive" />
         <AppProviders locale={locale} messages={messages}>
           {children}
         </AppProviders>
