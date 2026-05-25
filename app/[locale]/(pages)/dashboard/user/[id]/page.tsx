@@ -113,8 +113,8 @@ export default function EditCollector() {
     }
 
     const getValueRoleByName = (role: string) => {
-        switch(role) {
-            case "admin": 
+        switch (role) {
+            case "admin":
                 return ROLE_CODE.ADMIN;
             case "user":
                 return ROLE_CODE.USER;
@@ -122,6 +122,13 @@ export default function EditCollector() {
                 break;
         }
     }
+
+    const checkStatusCollectors = (listCollectors: any) => {
+        const collectorIds = listCollectors.filter(
+            (collector: any) => collector.status === STATUS.ACTIVE
+        ).map((collector: any) => collector.id)
+        return collectorIds;
+    };
 
     useEffect(() => {
         if (userDetail) {
@@ -138,7 +145,7 @@ export default function EditCollector() {
                 role: getValueRoleByName(userDetail.role),
                 avatar: userDetail.avatar || "",
                 distributor: userDetail.distributor || {},
-                collectorIds: userDetail.collectors?.map((collector: any) => collector.id) || []
+                collectorIds: checkStatusCollectors(userDetail.collectors) || []
             })
         }
     }, [userDetail])
