@@ -15,8 +15,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: production
-    command: yarn start
+      BASE_URL: ${BASE_URL}
+      APP_ENV: ${APP_ENV}
 
 # The commented out section below is an example of how to define a PostgreSQL
 # database that your application can use. `depends_on` tells Docker Compose to
