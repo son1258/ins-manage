@@ -13,6 +13,7 @@ import { useProviderList } from "@/hooks/useProvider";
 import { useCreateDistributorMutation } from "@/hooks/useDistributor";
 import { useRouter } from "next/navigation";
 import { useProductList } from "@/hooks/useCommonHook";
+import { handleApiError } from "@/utils/errorHandler";
 
 export default function CreateNewDistributor() {
     const t = useTranslations();
@@ -81,6 +82,9 @@ export default function CreateNewDistributor() {
                     router.back();
                 }
             },
+            onError: (err) => {
+                handleApiError(err, t);
+            }
         })
     }
 

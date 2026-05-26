@@ -1,4 +1,4 @@
-import { createCollector, disableCollector, loadCollectorById, loadCollectors, updateCollector } from "@/services/collectorService"
+import { createCollector, disableCollector, enableCollector, loadCollectorById, loadCollectors, updateCollector } from "@/services/collectorService"
 import { handleApiError } from "@/utils/errorHandler"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-toastify"
@@ -60,6 +60,23 @@ export const useUpdateCollectorMutation = (token: string) => {
 				queryClient.invalidateQueries({
 					queryKey: ['collectors']
 				})
+			}
+		}
+	})
+}
+
+export const useEnableCollectorMutation = (token: string) => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: any) => enableCollector(data, token),
+		onSuccess: (resp, variables) => {
+			if (resp && resp.success) {
+				queryClient.invalidateQueries({
+					queryKey: ['collector-detail', variables.id]
+				});
+				queryClient.invalidateQueries({
+					queryKey: ['collectors']
+				});
 			}
 		}
 	})

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faEdit, faTrashAlt, faSync, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -14,8 +14,10 @@ import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import CustomSelect from '@/components/CustomSelect';
 import Modal from '@/components/Modal';
-import { useCollectorList, useDisableCollector } from '@/hooks/useCollector';
+import { useCollectorList, useDisableCollector, useEnableCollectorMutation } from '@/hooks/useCollector';
 import { useProviderList } from '@/hooks/useProvider';
+import { toast } from 'react-toastify';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default function Collector() {
     const t = useTranslations();
@@ -29,8 +31,8 @@ export default function Collector() {
     const [openModal, setOpenModal] = useState(false);
 
     const listStatus = [
-        {code: STATUS.ACTIVE, name: t('active')},
-        {code: STATUS.DEACTIVE, name: t('deactive')},
+        { code: STATUS.ACTIVE, name: t('active') },
+        { code: STATUS.DEACTIVE, name: t('deactive') },
     ];
 
     const defaultParams = {
@@ -54,9 +56,10 @@ export default function Collector() {
         limit: limit
     }
     const [formData, setFormData] = useState(params);
-    const {data: providersRes, isLoading: isLoadProviders, isError: errLoadProviders} = useProviderList(accessToken);
-    const {data: collectorsRes, isLoading: isLoadCollectors, isError: errLoadCollectors} : any = useCollectorList(params, accessToken);
+    const { data: providersRes, isLoading: isLoadProviders, isError: errLoadProviders } = useProviderList(accessToken);
+    const { data: collectorsRes, isLoading: isLoadCollectors, isError: errLoadCollectors }: any = useCollectorList(params, accessToken);
     const disableMutation = useDisableCollector(accessToken, t);
+    const enableMutation = useEnableCollectorMutation(accessToken);
     const providers = errLoadProviders ? [] : providersRes?.data;
     const collectors = errLoadCollectors ? [] : collectorsRes?.data;
 
@@ -119,27 +122,44 @@ export default function Collector() {
 
     const onConfirmDisable = async () => {
         if (selectedCollector) {
-                const data = {
-                    id: selectedCollector.id,
-                    code: selectedCollector.code,
-                    name: selectedCollector.name,
-                    distributor_id: selectedCollector.distributor_id
-                }
+            const data = {
+                id: selectedCollector.id,
+                code: selectedCollector.code,
+                name: selectedCollector.name,
+                distributor_id: selectedCollector.distributor_id
+            }
             await disableMutation.mutateAsync(data);
             setOpenModal(false);
         }
     }
 
+    const handleEnableCollector = (collector: any) => {
+        enableMutation.mutate(
+            {
+                id: collector.id,
+                status: STATUS.ACTIVE
+            },
+            {
+                onSuccess: () => {
+                    toast.success(t('success'))
+                },
+                onError: (err) => {
+                    handleApiError(err, t)
+                }
+            }
+        )
+    }
+
     useEffect(() => {
         dispatch(setActiveTitle(t('collector')));
-    },[t])
+    }, [t])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_collector')}</h2>
                 <button
-                    onClick={createNew} 
+                    onClick={createNew}
                     className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-xs md:text-sm">
                     <FontAwesomeIcon icon={faPlus} /> {t('add_collector')}
                 </button>
@@ -155,7 +175,7 @@ export default function Collector() {
                                 </label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.providerId} 
+                                    value={formData.providerId}
                                     onChange={(value) => handleValueChange("providerId", value)}
                                     options={providers && providers.map((provider: any) => ({
                                         value: provider.id,
@@ -163,22 +183,22 @@ export default function Collector() {
                                     }))}
                                 />
                             </div>
-                             <InputGroup 
+                            <InputGroup
                                 label={t('collector_code')}
                                 value={formData.collectorCode}
-                                onChange={(e)=>handleValueChange("collectorCode", e.target.value)} 
+                                onChange={(e) => handleValueChange("collectorCode", e.target.value)}
                             />
-                             <InputGroup 
+                            <InputGroup
                                 label={t('collector_name')}
                                 value={formData.collectorName}
-                                onChange={(e)=>handleValueChange("collectorName", e.target.value)} 
+                                onChange={(e) => handleValueChange("collectorName", e.target.value)}
                             />
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-medium mb-1 text-gray-600">{t('status')}</label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.status} 
+                                    value={formData.status}
                                     onChange={(value) => handleValueChange("status", value)}
                                     options={listStatus.map((status: any) => ({
                                         value: status.code,
@@ -191,13 +211,13 @@ export default function Collector() {
                         <div className="flex justify-end items-center gap-4 pt-2">
                             <button
                                 type="button"
-                                onClick={handleRefresh} 
+                                onClick={handleRefresh}
                                 className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                                 <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                                 {t('refresh')}
                             </button>
                             <button
-                                type="submit" 
+                                type="submit"
                                 className="flex items-center bg-gray-800 border border-gray-800 text-white px-2 py-1 rounded transition-all text-sm font-semibold shadow-sm cursor-pointer">
                                 <FontAwesomeIcon icon={faSearch} className="mr-2 w-3 h-3" />
                                 {t('search')}
@@ -227,24 +247,33 @@ export default function Collector() {
                                         <td className="px-4 py-3 font-medium text-[var(--global-main-color)]">{collector.code}</td>
                                         <td className="px-4 py-3 text-gray-700">{collector.name}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                                                collector.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
-                                            }`}>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${collector.status === STATUS.ACTIVE ? 'bg-teal-400 text-white' : 'bg-red-500 text-white'
+                                                }`}>
                                                 {collector.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
-                                            <button 
-                                                onClick={() => router.push(`/${locale}/dashboard/collector/${collector.id}`)}
-                                                className="hover:text-blue-600 transition-colors cursor-pointer"
-                                            >
-                                                <FontAwesomeIcon icon={faEdit} />
-                                            </button>
-                                            {collector.status == STATUS.ACTIVE && (
-                                                <button 
-                                                    onClick={() => handleSelectDisableCollector(collector)}
-                                                    className="hover:text-red-600 transition-colors">
+                                            {collector.status == STATUS.ACTIVE ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => router.push(`/${locale}/dashboard/collector/${collector.id}`)}
+                                                        className="hover:text-blue-600 transition-colors cursor-pointer"
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSelectDisableCollector(collector)}
+                                                        className="hover:text-red-600 transition-colors">
                                                         <FontAwesomeIcon icon={faTrashAlt} />
+                                                    </button>
+                                                </>
+
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleEnableCollector(collector)}
+                                                    className="hover:text-blue-600 transition-colors cursor-pointer"
+                                                >
+                                                    <FontAwesomeIcon icon={faArrowsRotate} />
                                                 </button>
                                             )}
                                         </td>
@@ -262,13 +291,13 @@ export default function Collector() {
                     />
                 </div>
             </div>
-            <Modal 
-                isOpen={openModal} 
-                title={t('disable_collector')} 
-                onConfirm={onConfirmDisable} 
-                onClose={() => setOpenModal(false)} 
+            <Modal
+                isOpen={openModal}
+                title={t('disable_collector')}
+                onConfirm={onConfirmDisable}
+                onClose={() => setOpenModal(false)}
             />
             <Loading stateShow={isLoadProviders || isLoadCollectors || disableMutation.isPending} />
         </div>
-  );
+    );
 }

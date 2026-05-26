@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
 import { useCreateCollectorMutation } from '@/hooks/useCollector';
 import { useProviderList } from '@/hooks/useProvider';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default function CreateCollector() {
     const t = useTranslations();
@@ -64,6 +65,9 @@ export default function CreateCollector() {
                     router.back();
                 }
             },
+            onError: (err) => {
+                handleApiError(err, t);
+            }
         })
     }
 

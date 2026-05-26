@@ -53,3 +53,9 @@ export const updateCollector = (data: any, token: string) => {
     const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }
+
+export const enableCollector = (data: any, token: string) => {
+    const url = "collector/enable";
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}
