@@ -8,7 +8,7 @@ import "dayjs/locale/vi";
 interface Props {
     label?: string;
     value?: any;
-    picker?: "date" | "month" | "year"; 
+    picker?: "date" | "month" | "year";
     onChange?: (dateString: any) => void;
     required?: boolean;
     readOnly?: boolean;
@@ -17,6 +17,7 @@ interface Props {
     defaultValue?: any;
     conditionDate?: any;
     format?: any;
+    isError?: boolean;
 }
 
 export default function DatePickerCustom({
@@ -31,8 +32,9 @@ export default function DatePickerCustom({
     defaultValue = "",
     conditionDate = "",
     format = "",
+    isError = false
 }: Props) {
-  
+
     const handleDateChange = (date: any) => {
         if (!date) {
             onChange?.(null);
@@ -43,7 +45,28 @@ export default function DatePickerCustom({
     const parsedValue = value && dayjs(value, "YYYY-MM-DD", true).isValid() ? dayjs(value) : null;
 
     return (
-        <ConfigProvider locale={locale}>
+        <ConfigProvider
+            locale={locale}
+            theme={{
+                token: {
+                    colorError: "#ef4444",
+                    colorErrorHover: "#dc2626",
+                    colorErrorBg: "#fef2f2",
+                },
+                components: {
+                    DatePicker: {
+                        colorBorder: "#d1d5db",
+                        hoverBorderColor: "#d1d5db",
+                        activeBorderColor: "#d1d5db",
+                        boxShadow: "none",
+                        activeShadow: "none",
+
+                        borderRadius: 4,
+                        colorBgContainer: readOnly ? "#e5e7eb" : (isError ? "#fef2f2" : "#ffffff"),
+                    },
+                }
+            }}
+        >
             <div className={`flex flex-col gap-1 ${className}`}>
                 {label && (
                     <label className="text-sm font-medium text-gray-700 mb-1.5">
@@ -54,17 +77,17 @@ export default function DatePickerCustom({
 
                 <DatePicker
                     picker={picker}
+                    status={isError ? "error" : undefined}
                     value={parsedValue}
                     onChange={handleDateChange}
                     disabled={readOnly}
                     placeholder={placeholder}
                     format={format || "DD-MM-YYYY"}
-                    className={`w-full h-8 custom-date-picker ${readOnly ? 'bg-gray-200' : 'bg-white'}`}
+                    className={`w-full h-8 custom-date-picker`}
                     disabledDate={conditionDate}
-                    defaultPickerValue={defaultValue}                    
+                    defaultPickerValue={defaultValue}
                     showNow={false}
                     allowClear
-                    style={{ borderRadius: '4px' }}
                 />
             </div>
         </ConfigProvider>

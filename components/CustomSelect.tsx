@@ -15,6 +15,7 @@ interface Props {
     disabled?: boolean;
     className?: string;
     mode?: "multiple" | "tags";
+    isError?: boolean;
 }
 
 export default function CustomSelect({
@@ -25,19 +26,26 @@ export default function CustomSelect({
     disabled = false,
     className = "",
     mode,
+    isError = false,
 }: Props) {
   return (
     <ConfigProvider
         theme={{
-            components: {
-            Select: {
-                colorBorder: "#d1d5db",  
-                hoverBorderColor: "#d1d5db",
-                activeBorderColor: "#d1d5db",
-                activeOutlineColor: "transparent",
-                boxShadow: "none",
-                borderRadius: 4,
+            token: {
+                colorError: "#ef4444",
+                colorErrorHover: "#dc2626",
+                colorErrorBg: "#fef2f2",
             },
+            components: {
+                Select: {
+                    colorBorder: "#d1d5db",  
+                    hoverBorderColor: "#d1d5db",
+                    activeBorderColor: "#d1d5db",
+                    activeOutlineColor: "transparent",
+                    boxShadow: "none",
+                    borderRadius: 4,
+                    colorBgContainer: isError ? "#fef2f2" : "#ffffff", 
+                },
             },
         }}
     >
@@ -46,6 +54,7 @@ export default function CustomSelect({
                 optionFilterProp: 'label',
                 filterSort: (option) => option?.label
             }}
+            status={isError ? "error" : undefined}
             mode={mode}
             maxTagCount="responsive"
             value={value}

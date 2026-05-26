@@ -58,7 +58,18 @@ export default function OrderDetail() {
 	const [formErrors, setFormErrros] = useState({
 		socialCode: false,
 		hospital: false,
-		socialCodeAddMember: false,
+	})
+
+	const [formAddMemberErrors, setFormAddMemberErrors] = useState({
+		fullname: false,
+		birthday: false,
+		ethnicity: false,
+		nationality: false,
+		relationshipWithHouseHead: false,
+		birthRegisterAddress: false,
+		gender: false,
+		address: false,
+		socialCode: false,
 	})
 
 	const genders = [
@@ -233,6 +244,44 @@ export default function OrderDetail() {
 	};
 
 	const handleFormAddMemberChange = (nameField: string, value: any) => {
+		if (nameField == "socialCode") {
+			let state = false;
+			if (value) {
+				state = !validateNumericField(value, 10);
+			}
+			setFormAddMemberErrors(prev => ({
+				...prev,
+				socialCode: state
+			}))
+		}
+		if (
+			nameField === "fullname" ||
+			nameField === "address" ||
+			nameField === "birthRegisterAddress"
+		) {
+			setFormAddMemberErrors(prev => ({
+				...prev,
+				[nameField]: !value?.trim()
+			}))
+		}
+
+		if (
+			nameField === "birthday" ||
+			nameField === "relationshipWithHouseHead" ||
+			nameField === "ethnicity" ||
+			nameField === "nationality"
+		) {
+			setFormAddMemberErrors(prev => ({
+				...prev,
+				[nameField]: !value
+			}))
+		}
+		if (nameField == "gender") {
+			setFormAddMemberErrors(prev => ({
+				...prev,
+				gender: value === ""
+			}))
+		}
 		setFormAddMember((prev: any) => ({
 			...prev,
 			[nameField]: value
@@ -258,9 +307,20 @@ export default function OrderDetail() {
 
 	const handleSubmitAddMember = (e: React.FormEvent) => {
 		e.preventDefault();
-		const isInvalid = !formAddMember.fullname.trim() || !formAddMember.birthday || !formAddMember.relationshipWithHouseHead || !formAddMember.address.trim()
-			|| !formAddMember.ethnicity || !formAddMember.nationality || !formAddMember.gender || !formAddMember.birthRegisterAddress
-		if (isInvalid) {
+		const errList = {
+			fullname: formAddMember.fullname.trim() === "",
+			birthday: formAddMember.birthday === "",
+			ethnicity: formAddMember.ethnicity === "",
+			nationality: formAddMember.nationality === "",
+			relationshipWithHouseHead: formAddMember.relationshipWithHouseHead === "",
+			birthRegisterAddress: formAddMember.birthRegisterAddress === "",
+			gender: formAddMember.gender === "",
+			address: formAddMember.address === "",
+			socialCode: formAddMember.socialCode ? !validateNumericField(formAddMember.socialCode, 10) : false,
+		}
+		setFormAddMemberErrors(errList);
+		const isError = Object.values(errList).some(Boolean);
+		if (isError) {
 			toast.error(t('err_field_required'));
 			return;
 		}
@@ -292,6 +352,12 @@ export default function OrderDetail() {
 		setFormAddMember(defaultFormAddMember);
 		setModalAddMember(false);
 	}
+
+	const getDatePlaceholder = () => {
+		if (dateType === "year") return "YYYY";
+		if (dateType === "month") return "MM/YYYY";
+		return "DD/MM/YYYY";
+	};
 
 	const getRelationship = (value: string) => {
 		return FAMILY_RELATIONSHIPS.find(relationship => relationship.value == value)?.label || t('other')
@@ -1168,6 +1234,7 @@ export default function OrderDetail() {
 											label={t("fullname")}
 											value={formAddMember.fullname}
 											onChange={(e) => handleFormAddMemberChange("fullname", e.target.value)}
+											isError={formAddMemberErrors.fullname}
 											required
 										/>
 										<div className="flex flex-col gap-1.5 col-span-2">
@@ -1190,8 +1257,9 @@ export default function OrderDetail() {
 													className="w-1/2"
 													format={getDateFormat()}
 													value={formAddMember.birthday}
-													placeholder="DD/MM/YYYY"
+													placeholder={getDatePlaceholder()}
 													onChange={(value) => handleFormAddMemberChange("birthday", value)}
+													isError={formAddMemberErrors.birthday}
 												/>
 											</div>
 										</div>
@@ -1207,6 +1275,7 @@ export default function OrderDetail() {
 													value: relation.value,
 													label: relation.label,
 												}))}
+												isError={formAddMemberErrors.relationshipWithHouseHead}
 											/>
 										</div>
 										<div className="flex flex-col gap-1.5">
@@ -1221,6 +1290,7 @@ export default function OrderDetail() {
 													value: ethnicity.code,
 													label: ethnicity.name,
 												}))}
+												isError={formAddMemberErrors.ethnicity}
 											/>
 										</div>
 										<div className="flex flex-col gap-1.5">
@@ -1235,6 +1305,8 @@ export default function OrderDetail() {
 													value: country.code,
 													label: country.name,
 												}))}
+												isError={formAddMemberErrors.nationality}
+
 											/>
 										</div>
 										<div className="flex flex-col gap-1.5">
@@ -1249,6 +1321,7 @@ export default function OrderDetail() {
 													value: gender.value,
 													label: gender.label,
 												}))}
+												isError={formAddMemberErrors.gender}
 											/>
 										</div>
 										<div className="flex flex-col gap-1.5 md:col-span-1 col-span-2">
@@ -1263,13 +1336,14 @@ export default function OrderDetail() {
 													value: province.code,
 													label: province.name,
 												}))}
+												isError={formAddMemberErrors.birthRegisterAddress}
 											/>
 										</div>
 										<InputGroup
 											label={t("social_code")}
 											value={formAddMember.socialCode}
 											onChange={(e) => handleFormAddMemberChange("socialCode", e.target.value)}
-											isError={formErrors.socialCodeAddMember}
+											isError={formAddMemberErrors.socialCode}
 										/>
 										<InputGroup
 											label={t("nic")}
@@ -1295,9 +1369,10 @@ export default function OrderDetail() {
 										/>
 										<InputGroup
 											label={t("address")}
-											className="md:col-span-2 col-span-full"
+											className="col-span-full"
 											value={formAddMember.address}
 											onChange={(e) => handleFormAddMemberChange("address", e.target.value)}
+											isError={formAddMemberErrors.address}
 											required
 										/>
 										<div className="flex flex-col gap-1.5 col-span-full">
