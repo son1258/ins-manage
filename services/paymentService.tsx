@@ -59,3 +59,9 @@ export const terminatePayment = (data: any, token: string) => {
     const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }
+
+export const acceptPayment = (data: any, token: string) => {
+    const url = 'payment/accept';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}

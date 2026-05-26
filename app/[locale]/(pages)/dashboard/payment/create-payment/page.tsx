@@ -428,6 +428,7 @@ export default function CreatePaymentRequest() {
                             fieldFrom="fromDate"
                             fieldTo="toDate"
                             onChange={handleValueChange}
+                            format={"DD/MM/YYYY"}
                         />
                     </div>
 

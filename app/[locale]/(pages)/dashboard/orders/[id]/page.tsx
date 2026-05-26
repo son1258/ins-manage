@@ -233,14 +233,6 @@ export default function OrderDetail() {
 	};
 
 	const handleFormAddMemberChange = (nameField: string, value: any) => {
-		if (nameField === "socialCode") {
-			const errSocialCode = validateNumericField(value, 10);
-			setFormErrros((prev) => ({
-				...prev,
-				socialCodeAddMember: !errSocialCode,
-			}))
-		}
-
 		setFormAddMember((prev: any) => ({
 			...prev,
 			[nameField]: value
@@ -270,9 +262,6 @@ export default function OrderDetail() {
 			|| !formAddMember.ethnicity || !formAddMember.nationality || !formAddMember.gender || !formAddMember.birthRegisterAddress
 		if (isInvalid) {
 			toast.error(t('err_field_required'));
-			return;
-		} else if (formErrors.socialCodeAddMember) {
-			toast.error(t('err_check_form'));
 			return;
 		}
 		const dataMember = {
@@ -1263,7 +1252,9 @@ export default function OrderDetail() {
 											/>
 										</div>
 										<div className="flex flex-col gap-1.5 md:col-span-1 col-span-2">
-											<label className="text-sm mb-1 font-medium text-gray-600">{t('place_of_birth_registration')}</label>
+											<label className="text-sm mb-1 font-medium text-gray-600">
+												<span className="text-red-500">*</span> {t('place_of_birth_registration')}
+											</label>
 											<CustomSelect
 												placeholder={t('select_option')}
 												value={formAddMember.birthRegisterAddress}

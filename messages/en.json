@@ -260,5 +260,6 @@
   "cancelled": "Declaration cancelled",
   "images": "Attached Images",
   "remove_img": "Do you want to delete this image?",
-  "remove_member": "Do you want to remove this member?"
+  "remove_member": "Do you want to remove this member?",
+  "update_success_payment": "Do you want to update success payment this order?"
 }
