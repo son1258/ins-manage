@@ -24,8 +24,10 @@ import { confirmPayment } from '@/services/paymentService';
 import { toast } from 'react-toastify';
 import { handleApiError } from '@/utils/errorHandler';
 import { useQueryClient } from '@tanstack/react-query';
+import utc from 'dayjs/plugin/utc';
 
 export default function Payment() {
+    dayjs.extend(utc);
     const t = useTranslations();
     const router = useRouter();
     const locale = useLocale();
@@ -328,7 +330,7 @@ export default function Payment() {
                                                         )
                                                     })()}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600">{dayjs(payment.created_at).format("DD-MM-YYYY")}</td>
+                                                <td className="px-4 py-3 text-gray-600">{dayjs.utc(payment.created_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
                                                     {payment.status !== PAYMENT_STATUS.CANCEL && (
