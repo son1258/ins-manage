@@ -52,3 +52,9 @@ export const disableDistributor = (id: string, token: string) => {
     const resp = callApi(url, 'POST', {id: id}, 'v1', token);
     return resp;
 }
+
+export const enableDistributor = (data: string, token: string) => {
+    const url = 'distributor/enable';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch, faEdit, faTrashAlt, faSync } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faEdit, faTrashAlt, faSync, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -15,7 +15,9 @@ import Loading from '@/components/Loading';
 import Modal from '@/components/Modal';
 import CustomSelect from '@/components/CustomSelect';
 import { useProviderList } from '@/hooks/useProvider';
-import { useDisableDistributor, useDistributorList } from '@/hooks/useDistributor';
+import { useDisableDistributor, useDistributorList, useEnableDistributorMutation } from '@/hooks/useDistributor';
+import { toast } from 'react-toastify';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default function DistributorManagement() {
     const t = useTranslations();
@@ -29,8 +31,8 @@ export default function DistributorManagement() {
     const [selectedDistributorId, setSelectedDistributorId] = useState<any>();
 
     const listStatus = [
-        {code: STATUS.ACTIVE, name: t('active')},
-        {code: STATUS.DEACTIVE, name: t('deactive')},
+        { code: STATUS.ACTIVE, name: t('active') },
+        { code: STATUS.DEACTIVE, name: t('deactive') },
     ]
 
     const defaultParams = {
@@ -54,12 +56,12 @@ export default function DistributorManagement() {
         limit: limit
     }
     const [formData, setFormData] = useState(params);
-    const {data: providersResp, isLoading: isLoadProviders, isError: errLoadProviders} = useProviderList(accessToken);
+    const { data: providersResp, isLoading: isLoadProviders, isError: errLoadProviders } = useProviderList(accessToken);
     const providers = errLoadProviders ? [] : providersResp?.data;
-    const {data: distributorsResp, isLoading: isLoadDistributors, isError: errLoadDistributors} = useDistributorList(params, accessToken);
+    const { data: distributorsResp, isLoading: isLoadDistributors, isError: errLoadDistributors } = useDistributorList(params, accessToken);
     const distributors = errLoadDistributors ? [] : distributorsResp?.data;
     const disableMutation = useDisableDistributor(accessToken, t);
-
+    const enableMutation = useEnableDistributorMutation(accessToken);
     const createNew = () => {
         router.push(`/${locale}/dashboard/distributor/create-new`);
     }
@@ -122,8 +124,8 @@ export default function DistributorManagement() {
     const handleSelectDisableDistributor = (id: string) => {
         setOpenModal(!openModal);
         setSelectedDistributorId(id);
-    } 
-    
+    }
+
     const findProviderName = (providerId: string) => {
         if (providers) {
             const find = providers.find((item: any) => item.id == providerId);
@@ -131,16 +133,33 @@ export default function DistributorManagement() {
         }
     }
 
+    const handleEnableDistributor = (distributor: any) => {
+        enableMutation.mutate(
+            {
+                id: distributor.id,
+                status: STATUS.ACTIVE
+            },
+            {
+                onSuccess: () => {
+                    toast.success(t('success'))
+                },
+                onError: (err) => {
+                    handleApiError(err, t)
+                }
+            }
+        )
+    }
+
     useEffect(() => {
         dispatch(setActiveTitle(t('distributor')));
-    },[t])
+    }, [t])
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen text-black">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-base md:text-xl font-bold text-gray-800 uppercase">{t('manage_distributor')}</h2>
                 <button
-                    onClick={createNew} 
+                    onClick={createNew}
                     className="bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-blue-800 transition shadow-sm text-xs md:text-sm">
                     <FontAwesomeIcon icon={faPlus} /> {t('add_distributor')}
                 </button>
@@ -156,7 +175,7 @@ export default function DistributorManagement() {
                                 </label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.providerCode || undefined} 
+                                    value={formData.providerCode || undefined}
                                     onChange={(value) => handleValueChange("providerCode", value)}
                                     options={providers && providers.map((provider: any) => ({
                                         value: provider.code,
@@ -165,15 +184,15 @@ export default function DistributorManagement() {
                                 />
                             </div>
 
-                            <InputGroup 
+                            <InputGroup
                                 label={t('distributor_code')}
                                 value={formData.distributorCode}
-                                onChange={(e)=>handleValueChange("distributorCode", e.target.value)} 
+                                onChange={(e) => handleValueChange("distributorCode", e.target.value)}
                             />
-                             <InputGroup 
+                            <InputGroup
                                 label={t('distributor_name')}
                                 value={formData.distributorName}
-                                onChange={(e)=>handleValueChange("distributorName", e.target.value)} 
+                                onChange={(e) => handleValueChange("distributorName", e.target.value)}
                             />
 
                             <div className="flex flex-col gap-1.5">
@@ -182,7 +201,7 @@ export default function DistributorManagement() {
                                 </label>
                                 <CustomSelect
                                     placeholder={t('select_option')}
-                                    value={formData.status} 
+                                    value={formData.status}
                                     onChange={(value) => handleValueChange("status", value)}
                                     options={listStatus.map((status: any) => ({
                                         value: status.code,
@@ -195,7 +214,7 @@ export default function DistributorManagement() {
                         <div className="flex justify-end items-center gap-4 pt-2">
                             <button
                                 type="button"
-                                onClick={handleRefresh} 
+                                onClick={handleRefresh}
                                 className="flex items-center text-gray-500 text-xs hover:text-gray-800 transition-colors font-medium cursor-pointer">
                                 <FontAwesomeIcon icon={faSync} className="mr-2 w-3 h-3" />
                                 {t('refresh')}
@@ -234,7 +253,7 @@ export default function DistributorManagement() {
                                         <td className="px-4 py-3 text-gray-700">
                                             <div className="flex items-center gap-2 text-xs">
                                                 {item.products.map((product: any) => (
-                                                    <span 
+                                                    <span
                                                         className={`text-white px-2 py-1 rounded-lg ${product.code === PRODUCT_CODE.BHXH ? 'bg-sky-500' : 'bg-rose-500'}`}
                                                         key={product.id}>
                                                         {product.name}
@@ -243,25 +262,33 @@ export default function DistributorManagement() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                                                item.status === STATUS.ACTIVE
-                                                ? 'bg-teal-400 text-white' 
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${item.status === STATUS.ACTIVE
+                                                ? 'bg-teal-400 text-white'
                                                 : 'bg-red-500 text-white'
-                                            }`}>
+                                                }`}>
                                                 {item.status === STATUS.ACTIVE ? t('active').toUpperCase() : t('deactive').toUpperCase()}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center text-gray-400 space-x-3 whitespace-nowrap">
-                                            <button
-                                                onClick={() => router.push(`/${locale}/dashboard/distributor/${item.id}`)} 
-                                                className="hover:text-blue-600 transition-colors">
-                                                <FontAwesomeIcon icon={faEdit} />
-                                            </button>
-                                            {item.status == STATUS.ACTIVE && (
-                                                <button 
-                                                    onClick={() => handleSelectDisableDistributor(item.id)}
-                                                    className="hover:text-red-600 transition-colors">
-                                                    <FontAwesomeIcon icon={faTrashAlt} />
+                                            {item.status == STATUS.ACTIVE ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => router.push(`/${locale}/dashboard/distributor/${item.id}`)}
+                                                        className="hover:text-blue-600 transition-colors">
+                                                        <FontAwesomeIcon icon={faEdit} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSelectDisableDistributor(item.id)}
+                                                        className="hover:text-red-600 transition-colors">
+                                                        <FontAwesomeIcon icon={faTrashAlt} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleEnableDistributor(item)}
+                                                    className="hover:text-blue-600 transition-colors cursor-pointer"
+                                                >
+                                                    <FontAwesomeIcon icon={faArrowsRotate} />
                                                 </button>
                                             )}
                                         </td>
@@ -279,13 +306,13 @@ export default function DistributorManagement() {
                     />
                 </div>
             </div>
-            <Modal 
-                isOpen={openModal} 
-                title={t('disable_distributor')} 
-                onConfirm={onConfirmDisable} 
-                onClose={() => setOpenModal(false)} 
+            <Modal
+                isOpen={openModal}
+                title={t('disable_distributor')}
+                onConfirm={onConfirmDisable}
+                onClose={() => setOpenModal(false)}
             />
             <Loading stateShow={isLoadProviders || isLoadDistributors} />
         </div>
-  );
+    );
 }
