@@ -121,4 +121,5 @@ export const FAMILY_RATE = [
 ]
 
 export const SOCIAL_INS_RATE = 22;
+export const GOV_SUPPORT_AMOUNT = 66000;
 export const MEDICAL_INS_RATE = 4.5;

@@ -10,6 +10,14 @@ export const formatVND = (amount: number | string) => {
     return new Intl.NumberFormat('vi-VN').format(value);
 };
 
+export const parseVND = (amount: number | string) => {
+    if (!amount) return 0;
+
+    return typeof amount === "string"
+        ? Number(amount.replace(/\./g, "").replace(/[^0-9]/g, ""))
+        : amount;
+};
+
 export const calculateEndDate = (startDate: any, rangeTime: any, time: any) => {
     switch(time){
         case 'day': 

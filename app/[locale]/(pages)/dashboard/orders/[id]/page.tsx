@@ -14,6 +14,7 @@ import {
 	FAMILY_RATE,
 	FAMILY_RELATIONSHIPS,
 	GENDER,
+	GOV_SUPPORT_AMOUNT,
 	MEDICAL_INS_RATE,
 	NATIONAL,
 	PAYMENT_STATUS,
@@ -21,7 +22,7 @@ import {
 	SERVICE_CODE,
 	SOCIAL_INS_RATE,
 } from "@/constants";
-import { formatVND, validateNumericField } from "@/utils/common";
+import { formatVND, parseVND, validateNumericField } from "@/utils/common";
 import DatePickerCustom from "@/components/DatePicker";
 import Loading from "@/components/Loading";
 import dayjs from "dayjs";
@@ -207,6 +208,10 @@ export default function OrderDetail() {
 	const handleFormDataChange = (nameField: string, value: any) => {
 		if (nameField === "method") {
 			onMethodChange(value);
+		}
+
+		if (nameField === "baseAmount") {
+			value = parseVND(value); 
 		}
 
 		if (nameField === "fromMonth") {
@@ -529,7 +534,7 @@ export default function OrderDetail() {
 	useEffect(() => {
 		if (isBHXH) {
 			const totalAmount = Math.floor(Number(formData.baseAmount) * (SOCIAL_INS_RATE / 100) * Number(formData.month));
-			const finalAmount = Math.floor(totalAmount - (Number(formData.govSupportAmount) * Number(formData.month)));
+			const finalAmount = Math.floor(totalAmount - (GOV_SUPPORT_AMOUNT * Number(formData.month)));
 			setFormData((prev: any) => ({
 				...prev,
 				totalAmount: totalAmount,
@@ -544,7 +549,7 @@ export default function OrderDetail() {
 				amount: amount
 			}));
 		}
-	}, [formData.baseAmount, formData.month, formData.govSupportAmount, formData.rate]);
+	}, [formData.baseAmount, formData.month, formData.rate]);
 
 	useEffect(() => {
 		dispatch(setActiveTitle(t("order_detail")));
@@ -1000,7 +1005,7 @@ export default function OrderDetail() {
 							)}
 							<InputGroup
 								label={t("contribution_amount")}
-								value={formatVND(formData.amount)}
+								value={formData.amount > 0 ? formatVND(formData.amount) : 0}
 								className="md:col-span-1 col-span-2"
 								readOnly
 							/>
