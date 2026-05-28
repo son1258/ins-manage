@@ -532,26 +532,6 @@ export default function OrderDetail() {
 	}
 
 	useEffect(() => {
-		if (isBHXH) {
-			const totalAmount = Math.floor(Number(formData.baseAmount) * (SOCIAL_INS_RATE / 100) * Number(formData.month));
-			const finalAmount = Math.floor(totalAmount - (GOV_SUPPORT_AMOUNT * Number(formData.month)));
-			setFormData((prev: any) => ({
-				...prev,
-				totalAmount: totalAmount,
-				amount: finalAmount
-			}));
-		} else {
-			const endDate = dayjs(formData.startDate).add(formData.month, "month");
-			const amount = Math.floor((MEDICAL_INS_RATE / 100) * formData.baseAmount * formData.month) - formData.localSupportAmount
-			setFormData((prev: any) => ({
-				...prev,
-				endDate: dayjs(endDate).subtract(1, 'days'),
-				amount: amount
-			}));
-		}
-	}, [formData.baseAmount, formData.month, formData.rate]);
-
-	useEffect(() => {
 		dispatch(setActiveTitle(t("order_detail")));
 	}, [t]);
 
