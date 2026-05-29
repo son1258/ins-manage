@@ -17,11 +17,11 @@ export const metadata: Metadata = {
 
 type Props = {
   children: React.ReactNode;
-  params: Promise<{locale: string}>;
+  params: Promise<{ locale: string }>;
 }
 
-export default async function LocaleLayout({children, params}: Props) {
-  const {locale} = await params;
+export default async function LocaleLayout({ children, params }: Props) {
+  const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
@@ -30,7 +30,7 @@ export default async function LocaleLayout({children, params}: Props) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
-        <Script src="/runtime-config.js" strategy="beforeInteractive" />
+        <Script src="/runtime-config.js" strategy="afterInteractive" />
         <AppProviders locale={locale} messages={messages}>
           {children}
         </AppProviders>

@@ -8,15 +8,12 @@ import {
     faTimes,
     faBars,
     faBuilding,
-    faUserTie,
     faCashRegister,
     faUser,
-    faMoneyBillWave
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocale, useTranslations } from 'next-intl';
 import Cookies from 'js-cookie';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/lib/redux/store';
+import { useDispatch } from 'react-redux';
 import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';

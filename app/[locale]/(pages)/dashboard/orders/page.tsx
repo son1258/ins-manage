@@ -487,7 +487,7 @@ export default function Declarations() {
                                                 {getDateViaServiceCode(order.service_code, order.start_date)}
                                             </td>
                                             {Number(formData.serviceCode) != SERVICE_CODE.BHXH ? (
-                                                <td className="px-4 py-3 border-r border-white text-left">100</td>
+                                                <td className="px-4 py-3 border-r border-white text-left">{`${order.muc_dong_hgd}%`}</td>
                                             ) : (<></>)}
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
                                             <td className="px-4 py-3 text-right text-teal-600 font-bold">{formatVND(order.base_amount)}</td>
