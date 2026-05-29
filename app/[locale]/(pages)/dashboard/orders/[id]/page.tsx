@@ -577,7 +577,7 @@ export default function OrderDetail() {
 				provider: order.collector?.provider?.name,
 				collector: order.collector?.name,
 				previousDate: "",
-				city: isBHXH ? order.data.d05_ts.noi_dung[0].matinh_dang_ss : order.data.d03_ts.noi_dung[0].matinh_dang_ss,
+				city: order.data.tk1_ts.noi_dung[0].matinh_benh_vien,
 				hospital: isBHXH ? "" : order.data.d03_ts.noi_dung[0].ma_benh_vien,
 				plan: order.ld_pa,
 				method: isBHXH ? order.data.d05_ts.noi_dung[0].sothang : "",
