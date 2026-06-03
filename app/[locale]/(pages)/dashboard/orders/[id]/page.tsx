@@ -31,7 +31,7 @@ import { useOrderDetail, useUpdateOrderDetail } from "@/hooks/useOrder";
 import CustomSelect from "@/components/CustomSelect";
 import InputWithAffix from "@/components/InputWithAffix";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClose, faPlus, faSave, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+import { faClose, faPlus, faReceipt, faSave, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "antd";
 import Modal from '@/components/Modal';
 import { toast } from "react-toastify";
@@ -623,7 +623,16 @@ export default function OrderDetail() {
 				<>
 					<div className="w-full bg-white p-4 rounded shadow-sm border border-gray-200">
 						{order && order.status === PAYMENT_STATUS.RECORDED && (
-							<div className="w-full flex justify-end items-center">
+							<div className="w-full flex justify-end items-center gap-2">
+								{
+									order.contract_files && (
+										<a href={order.contract_files[0].url} target="_blank"
+											className="flex flex-row gap-1 items-center px-2 py-1 bg-red-600 text-sm text-white rounded-sm cursor-pointer">
+											<FontAwesomeIcon icon={faReceipt} />
+											{t('receipt')}
+										</a>
+									)
+								}
 								<button
 									onClick={onSave}
 									className="flex flex-row gap-1 items-center px-2 py-1 bg-sky-600 text-sm text-white rounded-sm cursor-pointer"
