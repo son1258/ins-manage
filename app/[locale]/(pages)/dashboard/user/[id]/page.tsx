@@ -102,7 +102,6 @@ export default function EditCollector() {
                 email: formData.email,
                 birthday: formData.birthday,
                 status: formData.status,
-                avatar: formData.avatar,
                 collector_ids: formData.collectorIds
             },
             {
@@ -134,13 +133,13 @@ export default function EditCollector() {
             const resp = await updateAvatar(formDataSubmit, accessToken);
             if (resp && resp.success) {
                 toast.success(t('success'))
-                queryClient.invalidateQueries({ queryKey: ['user-detail', params.id]})
             }
         } catch (err) {
             handleApiError(err, t);
         } finally {
             setIsUploading(false);
             e.target.value = '';
+            queryClient.invalidateQueries({ queryKey: ['user-detail', params.id]})
         }
     }
 
