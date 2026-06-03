@@ -3,7 +3,7 @@
 import FormSection from "@/components/FormSection";
 import InputGroup from "@/components/InputGroup";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Cookies from "js-cookie";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
@@ -14,9 +14,6 @@ import {
 	FAMILY_RATE,
 	FAMILY_RELATIONSHIPS,
 	GENDER,
-	GOV_SUPPORT_AMOUNT,
-	MEDICAL_INS_RATE,
-	NATIONAL,
 	PAYMENT_STATUS,
 	PLANS,
 	SERVICE_CODE,
@@ -31,12 +28,12 @@ import { useOrderDetail, useUpdateOrderDetail } from "@/hooks/useOrder";
 import CustomSelect from "@/components/CustomSelect";
 import InputWithAffix from "@/components/InputWithAffix";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClose, faPlus, faReceipt, faSave, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+import { faClose, faPlus, faReceipt, faSave, faTrashAlt, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "antd";
 import Modal from '@/components/Modal';
 import { toast } from "react-toastify";
 import { handleApiError } from "@/utils/errorHandler";
-import { removeImageOrder } from "@/services/orderService";
+import { addImageOrder, removeImageOrder } from "@/services/orderService";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function OrderDetail() {
@@ -56,6 +53,9 @@ export default function OrderDetail() {
 	const [imgSelected, setImgSelected] = useState<any>();
 	const [dateType, setDateType] = useState<"date" | "month" | "year">("date");
 	const [isLoadingState, startTransition] = useTransition();
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [isUploadImage, setIsUploadImage] = useState(false);
+
 	const [formErrors, setFormErrros] = useState({
 		socialCode: false,
 		hospital: false,
@@ -178,6 +178,29 @@ export default function OrderDetail() {
 	const ethnicities = errLoadEthinicities ? [] : ethnicitiesRes?.data;
 	const order = errLoadOrderDetail ? [] : orderDetailRes?.data;
 
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file || !accessToken) return;
+		const previewUrl = URL.createObjectURL(file);
+		setFormData((prev: any) => ({ ...prev, avatar: previewUrl }));
+		try {
+			setIsUploadImage(true)
+			const formDataSubmit = new FormData();
+			formDataSubmit.append('file', file);
+			formDataSubmit.append('dvc_order_id', formData.id)
+			const resp = await addImageOrder(formDataSubmit, accessToken);
+			if (resp && resp.success) {
+				toast.success(t('success'))
+				queryClient.invalidateQueries({ queryKey: ['order-detail', params.id] });
+			};
+		} catch (err) {
+			handleApiError(err, t);
+		} finally {
+			setIsUploadImage(false)
+			e.target.value = '';
+		}
+	}
+
 	const getNameProvince = (provinceCode: string) => {
 		if (provinces) {
 			const result = provinces.find((province: any) => province.code == provinceCode);
@@ -211,7 +234,7 @@ export default function OrderDetail() {
 		}
 
 		if (nameField === "baseAmount") {
-			value = parseVND(value); 
+			value = parseVND(value);
 		}
 
 		if (nameField === "fromMonth") {
@@ -400,7 +423,7 @@ export default function OrderDetail() {
 	}
 
 	const calculateAmountSocial = (baseAmount: number, month: number) => {
-		const value = Math.floor(Number(baseAmount) * SOCIAL_INS_RATE /100 * Number(month));
+		const value = Math.floor(Number(baseAmount) * SOCIAL_INS_RATE / 100 * Number(month));
 		return value ?? 0
 	}
 	const buildD03 = (formData: any) => ({
@@ -577,7 +600,7 @@ export default function OrderDetail() {
 				nationality: order.data.tk1_ts.noi_dung[0].quoc_tich,
 				phone: order.ld_phone,
 				birthRegisterAddress: order.data.tk1_ts.noi_dung[0].diachi_ks,
-				address: order.data.tk1_ts.noi_dung[0].ho_gia_dinh.diachi_tt_ch,
+				address: order.data.tk1_ts.noi_dung[0].diachi_nn,
 				provider: order.collector?.provider?.name,
 				collector: order.collector?.name,
 				previousDate: "",
@@ -941,7 +964,7 @@ export default function OrderDetail() {
 										value={formData.govSupportRate}
 										className="md:col-span-1 col-span-2"
 										onChange={(e) => handleFormDataChange("govSupportRate", e.target.value)}
-										prefix={`${t("other_case")}: - `}
+										prefix={`${t("other_case")}: `}
 										suffix="%"
 									/>
 									<InputGroup
@@ -1033,11 +1056,12 @@ export default function OrderDetail() {
 									onChange={(e) => handleFormDataChange("note", e.target.value)}
 								/>
 							</div>
-							<div className="md:col-span-4 col-span-2">
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									{t("images")}
-								</label>
-								{formData.attachments && formData.attachments.length > 0 && (
+
+							{formData.attachments && formData.attachments.length > 0 && (
+								<div className="md:col-span-4 col-span-2">
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										{t("images")}
+									</label>
 									<div className="mt-3 flex gap-3 overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
 										{formData.attachments.map((img: any) => (
 											<div
@@ -1065,13 +1089,43 @@ export default function OrderDetail() {
 											</div>
 										))}
 									</div>
-								)}
-								<Modal
-									isOpen={isRemoveImg}
-									title={t('remove_img')}
-									onConfirm={onConfirmRemoveImg}
-									onClose={() => setIsRemoveImg(false)}
+								</div>
+							)}
+
+							<Modal
+								isOpen={isRemoveImg}
+								title={t('remove_img')}
+								onConfirm={onConfirmRemoveImg}
+								onClose={() => setIsRemoveImg(false)}
+							/>
+
+							<div className="flex justify-end col-span-full">
+								<input
+									ref={fileInputRef}
+									type="file"
+									accept="image/*"
+									multiple
+									className="hidden"
+									onChange={handleFileChange}
 								/>
+								<button
+									type="button"
+									onClick={() => fileInputRef.current?.click()}
+									disabled={isUploadImage}
+									className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+								>
+									{isUploadImage ? (
+										<>
+											<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+											{`${t('adding_image')}...`}
+										</>
+									) : (
+										<>
+											<FontAwesomeIcon icon={faUpload} />
+											{t('upload_image')}
+										</>
+									)}
+								</button>
 							</div>
 						</FormSection>
 					</div>

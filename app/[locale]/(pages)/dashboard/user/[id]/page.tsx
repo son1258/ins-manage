@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
 import { useTranslations } from 'next-intl';
@@ -15,12 +15,15 @@ import DatePickerCustom from '@/components/DatePicker';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { faCamera, faUser } from '@fortawesome/free-solid-svg-icons';
 import { useUpdateUserMutation, useUserDetail } from '@/hooks/useUser';
 import { useCollectorList } from '@/hooks/useCollector';
+import { updateAvatar } from '@/services/userService';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function EditCollector() {
     const t = useTranslations();
+    const queryClient = useQueryClient();
     const params: any = useParams();
     const dispatch = useDispatch();
     const router = useRouter();
@@ -28,6 +31,8 @@ export default function EditCollector() {
     const accessToken = Cookies.get('accessToken') || "";
     const role = Cookies.get('userRole');
     const [isMounted, setIsMounted] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const listStatus = [
         { code: STATUS.ACTIVE, name: t('active') },
         { code: STATUS.DEACTIVE, name: t('deactive') },
@@ -112,6 +117,33 @@ export default function EditCollector() {
         )
     }
 
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !accessToken) return;
+        const previewUrl = URL.createObjectURL(file);
+        setFormData((prev: any) => ({ ...prev, avatar: previewUrl }));
+        try {
+            setIsUploading(true);
+            const formDataSubmit = new FormData();
+            formDataSubmit.append('file', file);
+            formDataSubmit.append('user_id', formData.userId)
+            const resp = await updateAvatar(formDataSubmit, accessToken);
+            if (resp && resp.success) {
+                toast.success(t('success'))
+                queryClient.invalidateQueries({ queryKey: ['user-detail', params.id]})
+            }
+        } catch (err) {
+            handleApiError(err, t);
+        } finally {
+            setIsUploading(false);
+            e.target.value = '';
+        }
+    }
+
     const getValueRoleByName = (role: string) => {
         switch (role) {
             case "admin":
@@ -168,18 +200,36 @@ export default function EditCollector() {
                         <div className="p-8">
                             <div className="flex flex-col items-center mb-10">
                                 <div className="relative group">
-                                    <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
-                                        {(formData.avatar !== "" && formData !== null) ? (
-                                            <img
-                                                src={formData.avatar}
-                                                alt="Avatar"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="text-gray-400 flex flex-col items-center">
-                                                <FontAwesomeIcon icon={faUser} />
-                                            </div>
-                                        )}
+                                    <div className="relative w-32 h-32 group cursor-pointer" onClick={handleAvatarClick}>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleFileChange}
+                                        />
+
+                                        <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
+                                            {formData?.avatar ? (
+                                                <img
+                                                    src={formData.avatar}
+                                                    alt="Avatar"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="text-gray-400 flex flex-col items-center">
+                                                    <FontAwesomeIcon icon={faUser} />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            {isUploading ? (
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <FontAwesomeIcon icon={faCamera} className="text-white text-xl" />
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <p className="mt-3 text-sm font-medium text-gray-500">{t('avatar')}</p>
@@ -241,11 +291,6 @@ export default function EditCollector() {
                                         label={t('address')}
                                         value={formData.address}
                                         onChange={(e) => handleValueChange("address", e.target.value)}
-                                    />
-                                    <InputGroup
-                                        label={t('link_image')}
-                                        value={formData.avatar}
-                                        onChange={(e) => handleValueChange("avatar", e.target.value)}
                                     />
                                     {isMounted && role === 'admin' && (
                                         <>

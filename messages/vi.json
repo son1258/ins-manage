@@ -262,5 +262,7 @@
     "images": "Ảnh đính kèm",
     "remove_img": "Bạn có muốn xoá ảnh này không?",
     "remove_member": "Bạn có muốn xoá người này không?",
-    "update_success_payment": "Bạn có muốn cập nhật trạng thái đã thanh toán cho đơn hàng này không?"
+    "update_success_payment": "Bạn có muốn cập nhật trạng thái đã thanh toán cho đơn hàng này không?",
+    "upload_image": "Tải ảnh",
+    "adding_image": "Đang tải ảnh"
 }

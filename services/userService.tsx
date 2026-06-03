@@ -49,3 +49,9 @@ export const updateUser = (data: any, token: string) => {
     const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }
+
+export const updateAvatar = (formData: any, token: string) => {
+    const url = 'user/avatar/update';
+    const resp = callApi(url, 'POST', formData, 'v1', token, true);
+    return resp;
+}

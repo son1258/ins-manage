@@ -23,11 +23,10 @@ export const callApi = async (
     try {
         const BASE_URL = getBaseUrl();
         const API_URL = `${BASE_URL}/api/${version || "v1"}`;
-
-        const headers: any = {
-            "Content-Type": isFormData ? 'multipart/form-data' : 'application/json',
-        };
-
+        const headers: any = {}
+        if (!isFormData) {
+            headers["Content-Type"] = "application/json";
+        }
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
         }
