@@ -78,7 +78,7 @@ export default function Declarations() {
     const params = {
         limit: limit,
         page: page,
-        serviceCode: searchParams.get('service_code') || "",
+        serviceCode: searchParams.get('service_code') || SERVICE_CODE.BHXH,
         medicalCode: searchParams.get('medical_code') || "",
         customerName: searchParams.get('customer_name') || "",
         customerPhone: searchParams.get('customer_phone') || "",
