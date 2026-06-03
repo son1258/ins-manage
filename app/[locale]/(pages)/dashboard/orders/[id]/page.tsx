@@ -156,7 +156,7 @@ export default function OrderDetail() {
 		benefitRank: "",
 		familyCode: "",
 		departmentCode: "",
-		totalAmount: "",
+		totalAmount: 0,
 		amount: "",
 		govSupportRate: "",
 		govSupportAmount: "",
@@ -399,6 +399,10 @@ export default function OrderDetail() {
 		setImgSelected(dataImange);
 	}
 
+	const calculateAmountSocial = (baseAmount: number, month: number) => {
+		const value = Math.floor(Number(baseAmount) * SOCIAL_INS_RATE /100 * Number(month));
+		return value ?? 0
+	}
 	const buildD03 = (formData: any) => ({
 		stt: 1,
 		ho_ten: formData.customerName,
@@ -604,7 +608,8 @@ export default function OrderDetail() {
 				change: "",
 				note: order.comment,
 				documentType: "",
-				departmentCode: isBHXH ? "" : order.data.d03_ts.noi_dung[0].ma_phong_ban
+				departmentCode: isBHXH ? "" : order.data.d03_ts.noi_dung[0].ma_phong_ban,
+				totalAmount: isBHXH ? calculateAmountSocial(order.base_amount, order.data.d05_ts.noi_dung[0].sothang) : 0
 			}
 			setPlans(dataPlans);
 			setFamilies(order.data.tk1_ts.noi_dung[0].ho_gia_dinh);

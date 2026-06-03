@@ -124,6 +124,7 @@ export default function EditCollector() {
     }
 
     const checkStatusCollectors = (listCollectors: any) => {
+        if (!listCollectors) return;
         const collectorIds = listCollectors.filter(
             (collector: any) => collector.status === STATUS.ACTIVE
         ).map((collector: any) => collector.id)

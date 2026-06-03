@@ -117,15 +117,17 @@ export default function EditDistributor() {
                             onChange={(e) => handleValueChange("distributorCode", e.target.value)}
                             isError={errors.distributorCode}
                             readOnly
+                            required
                         />
                         <InputGroup 
                             label={t('distributor_name')}
                             value={formData.distributorName}
                             onChange={(e) => handleValueChange("distributorName", e.target.value)}
                             isError={errors.distributorName}
+                            required
                         />
                          <div className="flex flex-col gap-1.5">
-                            <label className="text-sm mb-1 font-medium text-gray-600">{t('type')}<span className="text-red-500 mr-1">*</span></label>
+                            <label className="text-sm mb-1 font-medium text-gray-600"><span className="text-red-500 mr-1">*</span> {t('type')}</label>
                             <CustomSelect
                                 mode="multiple"
                                 placeholder={t('select_option')}
