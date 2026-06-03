@@ -127,7 +127,7 @@ export default function EditDistributor() {
                             required
                         />
                          <div className="flex flex-col gap-1.5">
-                            <label className="text-sm mb-1 font-medium text-gray-600"><span className="text-red-500 mr-1">*</span> {t('type')}</label>
+                            <label className="text-sm mb-1 font-medium text-gray-600"><span className="text-red-500 mr-1">*</span>{t('type')}</label>
                             <CustomSelect
                                 mode="multiple"
                                 placeholder={t('select_option')}
