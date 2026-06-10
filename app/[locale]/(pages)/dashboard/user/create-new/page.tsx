@@ -111,7 +111,7 @@ export default function CreateCollector() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="flex flex-col gap-1.5 mt-1 md:col-span-1">
                             <label className="text-sm text-gray-700">
-                                <span className="text-red-500 mr-1">*</span>{t('distributor_ins')}
+                                <span className="text-red-500 mr-1">*</span>{t('distributor')}
                             </label>
                            <CustomSelect
                                 placeholder={t('select_option')}
@@ -141,7 +141,7 @@ export default function CreateCollector() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <InputGroup 
-                            label={t('username')} 
+                            label={t('user_code')} 
                             onChange={(e) => handleValueChange("username", e.target.value)}
                             value={formData.username}
                             isError={errors.username}
