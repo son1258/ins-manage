@@ -219,7 +219,11 @@ export default function Declarations() {
     const exportFile = () => {
         if (!accessToken) return;
         startTransition(async () => {
-            const resp = await downloadFileExcel(formData, accessToken);
+            const fromDownLoad = {
+                ...formData,
+                lang: locale
+            }
+            const resp = await downloadFileExcel(fromDownLoad, accessToken);
             if (resp && resp.success) {
                 const url = resp.data.download_url;
                 const a = document.createElement('a');

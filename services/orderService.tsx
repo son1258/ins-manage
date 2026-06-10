@@ -129,6 +129,9 @@ export const downloadFileExcel = (params: any, token: string) => {
     if (params.orderNumber) {
         queryParams.push(`order_number=${params.orderNumber}`)
     }
+    if (params.lang) {
+        queryParams.push(`lang=${params.lang}`)
+    }
 
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
