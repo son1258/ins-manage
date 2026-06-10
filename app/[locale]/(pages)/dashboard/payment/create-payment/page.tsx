@@ -67,7 +67,7 @@ export default function CreatePaymentRequest() {
     })
 
     const [formData, setFormData] = useState<FormDataProps>({
-        serviceCode: "",
+        serviceCode: SERVICE_CODE.BHXH,
         medicalCode: "",
         customerName: "",
         status: PAYMENT_STATUS.RECORDED,
@@ -340,7 +340,7 @@ export default function CreatePaymentRequest() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t("create_payment_request")));
-        const serviceCode = Number(searchParams.get('service_code'));
+        const serviceCode = Number(searchParams.get('service_code')) || SERVICE_CODE.BHXH;
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
         const planParams = searchParams.get('plan');
@@ -385,7 +385,7 @@ export default function CreatePaymentRequest() {
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('type_declaration')}</label>
                             <CustomSelect
                                 placeholder={t('select_option')}
-                                value={formData.serviceCode || undefined} 
+                                value={formData.serviceCode || SERVICE_CODE.BHXH} 
                                 onChange={(value) => handleValueChange("serviceCode", value)}
                                 options={declarations.map((type) => ({
                                     value: type.code,

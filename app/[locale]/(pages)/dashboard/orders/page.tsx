@@ -79,6 +79,7 @@ export default function Declarations() {
         limit: limit,
         page: page,
         serviceCode: searchParams.get('service_code') || SERVICE_CODE.BHXH,
+        orderNumber: searchParams.get('order_number') || "",
         medicalCode: searchParams.get('medical_code') || "",
         customerName: searchParams.get('customer_name') || "",
         customerPhone: searchParams.get('customer_phone') || "",
@@ -96,6 +97,7 @@ export default function Declarations() {
         limit: 10,
         page: 1,
         serviceCode: SERVICE_CODE.BHXH,
+        orderNumber: "",
         medicalCode: "",
         customerName: "",
         customerPhone: "",
@@ -180,6 +182,9 @@ export default function Declarations() {
         }
         if (formData.toOrderDate) {
             newParams.set('to_order_date', String(formData.toOrderDate));
+        }
+        if (formData.orderNumber) {
+            newParams.set('order_number', String(formData.orderNumber));
         }
         router.push(`${pathname}?${newParams.toString()}`);
     }
@@ -286,6 +291,12 @@ export default function Declarations() {
                                 }))}
                             />
                         </div>
+
+                        <InputGroup
+                            label={t('declaration_code')}
+                            value={formData.orderNumber}
+                            onChange={(e) => handleValueChange("orderNumber", e.target.value)}
+                        />
 
                         <InputGroup
                             label={t('social_code')}

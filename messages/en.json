@@ -264,5 +264,6 @@
   "remove_member": "Do you want to remove this member?",
   "update_success_payment": "Do you want to update success payment this order?",
   "upload_image": "Upload Image",
-  "adding_image": "Uploading"
+  "adding_image": "Uploading",
+  "error_batch_payment": "An order has been successfully created. Please cancel and create a new payment request!"
 }

@@ -25,6 +25,7 @@ import { toast } from 'react-toastify';
 import { handleApiError } from '@/utils/errorHandler';
 import { useQueryClient } from '@tanstack/react-query';
 import utc from 'dayjs/plugin/utc';
+import Link from 'next/link';
 
 export default function Payment() {
     dayjs.extend(utc);
@@ -108,7 +109,7 @@ export default function Payment() {
     }
 
     const toggleRow = (payment: any) => {
-        if (payment.status !== PAYMENT_STATUS.WAIT_PAID) return;
+        if (payment.status !== PAYMENT_STATUS.WAIT_PAID && payment.status !== PAYMENT_STATUS.PAID && payment.status !== PAYMENT_STATUS.RECORDED) return;
         setExpandedRow(prev => {
             if (prev === payment.id) return null
             return payment.id;
@@ -156,6 +157,8 @@ export default function Payment() {
 
     const onSelectedPayment = (name: string, id: string) => {
         setBatchPaymentId(id);
+        setModalTerminate(false);
+        setModalUpdatePayment(false);
         if (name == "terminate") {
             setModalTerminate(!modalTerminate);
         }
@@ -165,7 +168,7 @@ export default function Payment() {
     }
 
     const onConfirmUpdateSuccessPayment = async () => {
-       if (batchPaymentId) {
+        if (batchPaymentId) {
             const data = {
                 batch_payment_id: batchPaymentId
             }
@@ -209,7 +212,7 @@ export default function Payment() {
                     await queryClient.invalidateQueries({ queryKey: ['payments'] })
                 }
             } catch (err: any) {
-                handleApiError(err, t);
+                toast.error(t("error_batch_payment"));
             }
         })
     }
@@ -310,7 +313,7 @@ export default function Payment() {
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
                                             >
                                                 <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
-                                                    {payment.status === PAYMENT_STATUS.WAIT_PAID ? (
+                                                    {(payment.status === PAYMENT_STATUS.WAIT_PAID || payment.status === PAYMENT_STATUS.PAID || payment.status === PAYMENT_STATUS.RECORDED) ? (
                                                         <FontAwesomeIcon
                                                             onClick={() => toggleRow(payment)}
                                                             icon={expandedRow === payment.id ? faChevronDown : faChevronRight}
@@ -360,12 +363,6 @@ export default function Payment() {
                                                                     className="hover:text-red-600"><FontAwesomeIcon icon={faMoneyCheckDollar} />
                                                                 </button>
                                                             )}
-                                                            <Modal
-                                                                isOpen={modalUpdatePayment}
-                                                                title={t('update_success_payment')}
-                                                                onConfirm={onConfirmUpdateSuccessPayment}
-                                                                onClose={() => setModalUpdatePayment(false)}
-                                                            />
                                                         </div>
                                                     )}
                                                 </td>
@@ -391,7 +388,9 @@ export default function Payment() {
                                                                     <tbody>
                                                                         {listOrders.map((order: any) => (
                                                                             <tr key={order.order_number} className="border-b border-orange-50 last:border-0">
-                                                                                <td className="pl-14 py-2 text-blue-600">{order.order_number}</td>
+                                                                                <td className="pl-14 py-2 text-blue-600">
+                                                                                    <Link href={`/${locale}/dashboard/orders/${order.id}`}>{order.order_number}</Link>
+                                                                                </td>
                                                                                 <td className="px-4 py-2">{order.user.fullname}</td>
                                                                                 <td className="px-4 py-2">{getServiceNameFromCode(order.service_code)}</td>
                                                                                 <td className="px-4 py-2 font-mono">{order.ld_maso_bhxh}</td>
@@ -499,6 +498,12 @@ export default function Payment() {
                     </div>
                 )}
             </div>
+            <Modal
+                isOpen={modalUpdatePayment}
+                title={t('update_success_payment')}
+                onConfirm={onConfirmUpdateSuccessPayment}
+                onClose={() => setModalUpdatePayment(false)}
+            />
             <Modal
                 isOpen={modalTerminate}
                 title={t('terminate_order')}
