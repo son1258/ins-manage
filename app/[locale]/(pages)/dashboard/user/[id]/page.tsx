@@ -238,7 +238,7 @@ export default function EditCollector() {
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     <div className="flex flex-col gap-1.5 md:col-span-1">
                                         <InputGroup
-                                            label={t('distributor_ins')}
+                                            label={t('distributor')}
                                             value={formData.distributor.name}
                                             readOnly
                                         />
