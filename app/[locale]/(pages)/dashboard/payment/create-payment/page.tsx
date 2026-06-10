@@ -219,6 +219,7 @@ export default function CreatePaymentRequest() {
             startTransition(async () => {
                 try {
                     const data = {
+                        "service_code": String(formData.serviceCode),
                         "from_date": formData.fromDate,
                         "to_date": formData.toDate,
                         "list_excluded_orders": []
