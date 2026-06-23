@@ -429,6 +429,7 @@ export default function Declarations() {
                                 <thead>
                                     <tr className="bg-[var(--global-main-color)] text-white whitespace-nowrap">
                                         <th className="px-4 py-3 border-r border-white text-center">{t('declaration_code')}</th>
+                                        <th className="px-4 py-3 border-r border-white text-center">{t('payment_request_id')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('user')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('voucher_code')}</th>
                                         <th className="px-4 py-3 border-r border-white">{t('plan')}</th>
@@ -466,6 +467,9 @@ export default function Declarations() {
                                                 <Link href={`/${locale}/dashboard/orders/${order.id}`}>
                                                     {order.order_number}
                                                 </Link>
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.batch_payment ? order.batch_payment[0].code : ''}
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {order.user.username}
