@@ -54,8 +54,8 @@ export default function Declarations() {
         { code: INTERNAL_STATUS.RECORD, name: t('record') },
         { code: INTERNAL_STATUS.WAIT_PAID, name: t('pending_payment') },
         { code: INTERNAL_STATUS.PAID, name: t('paid') },
-        { code: INTERNAL_STATUS.RECORD_CREATED, name: t('record_created') },
-        { code: INTERNAL_STATUS.RECORD_SUBMITTED, name: t('record_submitted') },
+        // { code: INTERNAL_STATUS.RECORD_CREATED, name: t('record_created') },
+        // { code: INTERNAL_STATUS.RECORD_SUBMITTED, name: t('record_submitted') },
         { code: INTERNAL_STATUS.APPROVED_BY_SOCIAL_INS, name: t('approved_by_social_ins') },
         { code: INTERNAL_STATUS.RETURNED_BY_SOCIAL_INS, name: t('return_by_social_ins') },
         { code: INTERNAL_STATUS.CANCELLED, name: t('cancelled_declaration') },
@@ -322,7 +322,7 @@ export default function Declarations() {
                                 }))}
                             />
                         </div>
-                        <div className="flex flex-col gap-1.5">
+                        {/* <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('social_status')}</label>
                             <CustomSelect
                                 placeholder={t('select_option')}
@@ -333,7 +333,7 @@ export default function Declarations() {
                                     label: type.name,
                                 }))}
                             />
-                        </div>
+                        </div> */}
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('plan')}</label>
