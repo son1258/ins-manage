@@ -55,7 +55,7 @@ export default function Declarations() {
         { code: INTERNAL_STATUS.WAIT_PAID, name: t('pending_payment') },
         { code: INTERNAL_STATUS.PAID, name: t('paid') },
         // { code: INTERNAL_STATUS.RECORD_CREATED, name: t('record_created') },
-        // { code: INTERNAL_STATUS.RECORD_SUBMITTED, name: t('record_submitted') },
+        { code: INTERNAL_STATUS.RECORD_SUBMITTED, name: t('record_submitted') },
         { code: INTERNAL_STATUS.APPROVED_BY_SOCIAL_INS, name: t('approved_by_social_ins') },
         { code: INTERNAL_STATUS.RETURNED_BY_SOCIAL_INS, name: t('return_by_social_ins') },
         { code: INTERNAL_STATUS.CANCELLED, name: t('cancelled_declaration') },
