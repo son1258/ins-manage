@@ -12,7 +12,7 @@ import { setActiveTitle } from '@/lib/redux/slices/menuSlice';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Loading from '@/components/Loading';
-import { PROVIDER_ORDER_STATUS, PAYMENT_STATUS, PLANS, SERVICE_CODE, INTERNAL_STATUS } from '@/constants';
+import { PROVIDER_ORDER_STATUS, PLANS, SERVICE_CODE, INTERNAL_STATUS, ORDER_STATUS } from '@/constants';
 import CustomSelect from '@/components/CustomSelect';
 import dayjs from 'dayjs';
 import DateRangePicker from '@/components/DateRangePicker';
@@ -54,7 +54,6 @@ export default function Declarations() {
         { code: INTERNAL_STATUS.RECORD, name: t('record') },
         { code: INTERNAL_STATUS.WAIT_PAID, name: t('pending_payment') },
         { code: INTERNAL_STATUS.PAID, name: t('paid') },
-        // { code: INTERNAL_STATUS.RECORD_CREATED, name: t('record_created') },
         { code: INTERNAL_STATUS.RECORD_SUBMITTED, name: t('record_submitted') },
         { code: INTERNAL_STATUS.APPROVED_BY_SOCIAL_INS, name: t('approved_by_social_ins') },
         { code: INTERNAL_STATUS.RETURNED_BY_SOCIAL_INS, name: t('return_by_social_ins') },
@@ -62,15 +61,13 @@ export default function Declarations() {
     ]
 
     const providerStatus = [
-        { code: PROVIDER_ORDER_STATUS.SUCCESS, name: t('create_declaration_success') },
         { code: PROVIDER_ORDER_STATUS.PAID_BY_PARTNER, name: t('paid_by_partner') },
         { code: PROVIDER_ORDER_STATUS.PENDING_PAYMENT_SOCIAL_INS, name: t('pending_payment_social_ins') },
         { code: PROVIDER_ORDER_STATUS.PAID_BY_SOCIAL_INS, name: t('paid_buy_social_ins') },
         { code: PROVIDER_ORDER_STATUS.RECORD_CREATED, name: t('record_created') },
         { code: PROVIDER_ORDER_STATUS.RECORD_SUBMITTED, name: t('record_submitted') },
         { code: PROVIDER_ORDER_STATUS.APPROVED_BY_SOCIAL_INS, name: t('approved_by_social_ins') },
-        { code: PROVIDER_ORDER_STATUS.RETURNED_BY_SOCIAL_INS, name: t('return_by_social_ins') },
-        { code: PROVIDER_ORDER_STATUS.CANCELLED, name: t('cancelled') },
+        { code: PROVIDER_ORDER_STATUS.RETURNED_BY_SOCIAL_INS, name: t('return_by_social_ins') }
     ]
 
     const page = Number(searchParams.get('page')) || 1;
@@ -117,10 +114,12 @@ export default function Declarations() {
 
     const getPaymentStatus = (status: string) => {
         const statusMap: Record<string, { bg: string; label: string }> = {
-            [PAYMENT_STATUS.RECORDED]: { bg: 'bg-green-600', label: t('recorded') },
-            [PAYMENT_STATUS.WAIT_PAID]: { bg: 'bg-amber-400', label: t('pending_payment') },
+            [ORDER_STATUS.RECORDED]: { bg: 'bg-green-600', label: t('recorded') },
+            [ORDER_STATUS.WAIT_PAID]: { bg: 'bg-amber-400', label: t('pending_payment') },
+            [ORDER_STATUS.PAID]: { bg: 'bg-blue-400', label: t('paid') },
+            [ORDER_STATUS.CANCEL]: { bg: 'bg-red-600', label: t('cancel') },
         }
-        return statusMap[status] ?? { bg: 'bg-blue-600', label: t('paid') }
+        return statusMap[status]
     }
 
     const getPlanLabel = (order: any) => {
@@ -322,7 +321,7 @@ export default function Declarations() {
                                 }))}
                             />
                         </div>
-                        {/* <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('social_status')}</label>
                             <CustomSelect
                                 placeholder={t('select_option')}
@@ -333,7 +332,7 @@ export default function Declarations() {
                                     label: type.name,
                                 }))}
                             />
-                        </div> */}
+                        </div>
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm mb-1 font-medium text-gray-600">{t('plan')}</label>

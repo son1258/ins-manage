@@ -1,9 +1,9 @@
 "use client"
 
-import { faSearch, faSync, faTrash, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes, faCheck, faMoneyCheckDollar } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faTrash, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes, faMoneyCheckDollar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination from '@/components/Pagination';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -20,10 +20,6 @@ import { formatVND } from '@/utils/common';
 import Loading from '@/components/Loading';
 import Modal from '@/components/Modal';
 import { useAcceptPaymentMutation, useListOrdersInBatchPayment, usePaymentList, useTerminatePaymentMutation } from '@/hooks/usePayment';
-import { confirmPayment } from '@/services/paymentService';
-import { toast } from 'react-toastify';
-import { handleApiError } from '@/utils/errorHandler';
-import { useQueryClient } from '@tanstack/react-query';
 import utc from 'dayjs/plugin/utc';
 import Link from 'next/link';
 
@@ -39,7 +35,6 @@ export default function Payment() {
     const accessToken = Cookies.get('accessToken') || "";
     const today = dayjs();
     const from = today.subtract(6, "day");
-    const queryClient = useQueryClient();
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [modalTerminate, setModalTerminate] = useState(false);
@@ -48,10 +43,8 @@ export default function Payment() {
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
     const [batchPaymentId, setBatchPaymentId] = useState('');
-    const [isLoadingConfirm, startTransition] = useTransition();
 
     const status = [
-        { code: PAYMENT_STATUS.RECORDED, name: t('record') },
         { code: PAYMENT_STATUS.PAID, name: t('paid') },
         { code: PAYMENT_STATUS.WAIT_PAID, name: t('pending_payment') },
         { code: PAYMENT_STATUS.CANCEL, name: t('cancel') }
@@ -109,7 +102,7 @@ export default function Payment() {
     }
 
     const toggleRow = (payment: any) => {
-        if (payment.status !== PAYMENT_STATUS.WAIT_PAID && payment.status !== PAYMENT_STATUS.PAID && payment.status !== PAYMENT_STATUS.RECORDED) return;
+        if (payment.status !== PAYMENT_STATUS.WAIT_PAID && payment.status !== PAYMENT_STATUS.PAID) return;
         setExpandedRow(prev => {
             if (prev === payment.id) return null
             return payment.id;
@@ -200,21 +193,7 @@ export default function Payment() {
             [PAYMENT_STATUS.CANCEL]: { bg: 'bg-red-500', label: t('cancel') },
             [PAYMENT_STATUS.WAIT_PAID]: { bg: 'bg-amber-500', label: t('pending_payment') },
         }
-        return statusMap[status] ?? { bg: 'bg-green-400', label: t('record') }
-    }
-
-    const handleConfirmPayment = (payment: any) => {
-        startTransition(async () => {
-            try {
-                const resp = await confirmPayment({ batch_payment_id: payment.id }, accessToken);
-                if (resp && resp.success) {
-                    toast.success(t("success"));
-                    await queryClient.invalidateQueries({ queryKey: ['payments'] })
-                }
-            } catch (err: any) {
-                toast.error(t("error_batch_payment"));
-            }
-        })
+        return statusMap[status];
     }
 
     useEffect(() => {
@@ -313,7 +292,7 @@ export default function Payment() {
                                                 className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
                                             >
                                                 <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
-                                                    {(payment.status === PAYMENT_STATUS.WAIT_PAID || payment.status === PAYMENT_STATUS.PAID || payment.status === PAYMENT_STATUS.RECORDED) ? (
+                                                    {(payment.status === PAYMENT_STATUS.WAIT_PAID || payment.status === PAYMENT_STATUS.PAID) ? (
                                                         <FontAwesomeIcon
                                                             onClick={() => toggleRow(payment)}
                                                             icon={expandedRow === payment.id ? faChevronDown : faChevronRight}
@@ -338,20 +317,12 @@ export default function Payment() {
                                                 <td className="px-4 py-3 text-center text-gray-400 space-x-3">
                                                     {payment.status !== PAYMENT_STATUS.CANCEL && (
                                                         <div className='flex items-center justify-center w-full gap-2'>
-                                                            {payment.status === PAYMENT_STATUS.RECORDED ? (
-                                                                <button
-                                                                    onClick={() => handleConfirmPayment(payment)}
-                                                                    className="hover:text-blue-600">
-                                                                    <FontAwesomeIcon icon={faCheck} />
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => handleShowOr(payment)}
-                                                                    className="hover:text-blue-600">
-                                                                    <FontAwesomeIcon icon={faQrcode} />
-                                                                </button>
-                                                            )}
-                                                            {(payment.status !== PAYMENT_STATUS.PAID || payment.status === PAYMENT_STATUS.RECORDED) &&
+                                                            <button
+                                                                onClick={() => handleShowOr(payment)}
+                                                                className="hover:text-blue-600">
+                                                                <FontAwesomeIcon icon={faQrcode} />
+                                                            </button>
+                                                            {(payment.status !== PAYMENT_STATUS.PAID) &&
                                                                 <button
                                                                     onClick={() => onSelectedPayment("terminate", payment.id)}
                                                                     className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
@@ -469,7 +440,7 @@ export default function Payment() {
                                     <div className="w-full md:w-1/2 space-y-3 text-[13px]">
                                         <InfoItem
                                             label="Tên tài khoản"
-                                            value="CONG TY CO PHAN BAO HIEM PVI"
+                                            value="CONG TY CO PHAN BAO HIEM"
                                         />
                                         <InfoItem
                                             label="Số tài khoản"
@@ -510,7 +481,7 @@ export default function Payment() {
                 onConfirm={onConfirmTerminatePayment}
                 onClose={() => setModalTerminate(false)}
             />
-            <Loading stateShow={isLoadingConfirm || isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending} />
+            <Loading stateShow={isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending} />
         </div>
     )
 }

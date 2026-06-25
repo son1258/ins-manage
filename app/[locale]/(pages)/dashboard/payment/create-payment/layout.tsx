@@ -2,10 +2,10 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useTransition } from 'react';
-import { useSelector } from 'react-redux'; 
+import { useSelector } from 'react-redux';
 import Cookies from 'js-cookie';
 import { handleApiError } from '@/utils/errorHandler';
-import { confirmPayment, createNewPayment } from '@/services/paymentService';
+import { createNewPayment } from '@/services/paymentService';
 import { useRouter } from 'next/navigation';
 import Loading from '@/components/Loading';
 import { toast } from 'react-toastify';
@@ -14,14 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export default function CreatePaymentLayout({ children }: { children: React.ReactNode }) {
     const t = useTranslations();
-    const { 
-        selectedItems, 
-        totalAmount, 
-        excludedItems, 
-        isPaymentAllDate, 
-        batchPayments,
-        isSynced
-    } = useSelector((state: any) => state.payment);
+    const { selectedItems, totalAmount } = useSelector((state: any) => state.payment);
     const accessToken = Cookies.get('accessToken');
     const [isLoading, startTransition] = useTransition();
     const router = useRouter();
@@ -29,34 +22,24 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
     const queryClient = useQueryClient();
 
     const isDisablePayment = useMemo(() => {
-        if (isPaymentAllDate) {
-            if (!batchPayments?.id) return true
-            if (excludedItems.length > 0 && !isSynced) return true
-            return false
-        }
         return !selectedItems || selectedItems.length === 0
-    }, [isPaymentAllDate, batchPayments, excludedItems, isSynced, selectedItems])
+    }, [selectedItems])
 
     const createPayment = async () => {
         if (!totalAmount || !accessToken) return;
         startTransition(async () => {
             try {
-                let resp;
-                if (isPaymentAllDate) {
-                    resp = await confirmPayment({batch_payment_id: batchPayments.id}, accessToken);
-                } else {
-                    const data = {
-                        order_id_list: selectedItems,
-                        status: PAYMENT_STATUS.RECORDED 
-                    }
-                    resp = await createNewPayment(data, accessToken);
+                const data = {
+                    order_id_list: selectedItems,
+                    status: PAYMENT_STATUS.WAIT_PAID
                 }
+                const resp = await createNewPayment(data, accessToken);
                 if (resp && resp.success) {
                     toast.success(t("success"));
                     router.push(`/${locale}/dashboard/payment`);
-                    await queryClient.invalidateQueries({queryKey: ['payments']})
+                    await queryClient.invalidateQueries({ queryKey: ['payments'] })
                 }
-            } catch(err: any) {
+            } catch (err: any) {
                 handleApiError(err, t);
             }
         })
@@ -64,7 +47,7 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
 
     return (
         <div className="relative flex flex-col min-h-full bg-[#f4f7fa] w-full">
-            <div className="flex-1 pb-4"> 
+            <div className="flex-1 pb-4">
                 {children}
             </div>
 
@@ -78,7 +61,7 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                             <span className="text-2xl font-bold text-[#1e3a5f]">
                                 {selectedItems?.length > 0 ? selectedItems.length : "--"}
                             </span>
-                            <span className="text-gray-500 text-sm">hồ sơ /</span>
+                            <span className="text-gray-500 text-sm">{t('records')} /</span>
                             <span className="text-2xl font-bold text-red-600">
                                 {selectedItems?.length > 0 ? totalAmount.toLocaleString('vi-VN') : "--"}
                             </span>
@@ -91,7 +74,7 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                         disabled={isDisablePayment}
                         className={`px-8 py-3 rounded-md font-bold text-sm transition-all shadow-md
                             ${!isDisablePayment
-                                ? 'bg-[#1e3a5f] text-white hover:bg-[#152944] active:scale-95' 
+                                ? 'bg-[#1e3a5f] text-white hover:bg-[#152944] active:scale-95'
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                     >
