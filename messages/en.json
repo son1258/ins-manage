@@ -260,10 +260,13 @@
   "return_by_social_ins": "Returned by Social Insurance Agency",
   "cancelled": "Declaration cancelled",
   "images": "Attached Images",
+  "remove": "Remove",
   "remove_img": "Do you want to delete this image?",
   "remove_member": "Do you want to remove this member?",
+  "remove_receipt": "Do you want to remove this receipt?",
   "update_success_payment": "Do you want to update success payment this order?",
   "upload_image": "Upload Image",
   "adding_image": "Uploading",
-  "error_batch_payment": "An order has been successfully created. Please cancel and create a new payment request!"
+  "error_batch_payment": "An order has been successfully created. Please cancel and create a new payment request!",
+  "records": "Records"
 }

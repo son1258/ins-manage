@@ -28,12 +28,12 @@ import { useOrderDetail, useUpdateOrderDetail } from "@/hooks/useOrder";
 import CustomSelect from "@/components/CustomSelect";
 import InputWithAffix from "@/components/InputWithAffix";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClose, faPlus, faReceipt, faSave, faTrashAlt, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faClose, faPlus, faReceipt, faSave, faTrash, faTrashAlt, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "antd";
 import Modal from '@/components/Modal';
 import { toast } from "react-toastify";
 import { handleApiError } from "@/utils/errorHandler";
-import { addImageOrder, removeImageOrder } from "@/services/orderService";
+import { addImageOrder, removeImageOrder, terminateOrder } from "@/services/orderService";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function OrderDetail() {
@@ -50,6 +50,7 @@ export default function OrderDetail() {
 	const [isRemoveMember, setIsRemoveMember] = useState(false);
 	const [memberSelected, setMemberSelected] = useState<any>();
 	const [isRemoveImg, setIsRemoveImg] = useState(false);
+	const [isRemoveReceipt, setIsRemoveReceipt] = useState(false);
 	const [imgSelected, setImgSelected] = useState<any>();
 	const [dateType, setDateType] = useState<"date" | "month" | "year">("date");
 	const [isLoadingState, startTransition] = useTransition();
@@ -417,6 +418,23 @@ export default function OrderDetail() {
 		})
 	}
 
+	const onConfirmTerminateOrder = () => {
+		if (!accessToken) return;
+		startTransition(async () => {
+			try {
+				const resp = await terminateOrder({ id: order.id }, accessToken);
+				if (resp && resp.success) {
+					toast.success(t('success'));
+					queryClient.invalidateQueries({ queryKey: ['orders'] });
+					queryClient.invalidateQueries({ queryKey: ['order-detail', params.id] });
+					router.back();
+				}
+			} catch (err) {
+				handleApiError(err, t)
+			}
+		})
+	}
+
 	const handleRemoveImage = (dataImange: any) => {
 		setIsRemoveImg(true);
 		setImgSelected(dataImange);
@@ -650,7 +668,7 @@ export default function OrderDetail() {
 								{
 									order.contract_files && (
 										<a href={order.contract_files[0].url} target="_blank"
-											className="flex flex-row gap-1 items-center px-2 py-1 bg-red-600 text-sm text-white rounded-sm cursor-pointer">
+											className="flex flex-row gap-1 items-center px-2 py-1 bg-amber-600 text-sm text-white rounded-sm cursor-pointer">
 											<FontAwesomeIcon icon={faReceipt} />
 											{t('receipt')}
 										</a>
@@ -663,6 +681,19 @@ export default function OrderDetail() {
 									<FontAwesomeIcon icon={faSave} />
 									{t('save')}
 								</button>
+								<button
+									onClick={() => setIsRemoveReceipt(true)}
+									className="flex flex-row gap-1 items-center px-2 py-1 bg-red-600 text-sm text-white rounded-sm cursor-pointer"
+								>
+									<FontAwesomeIcon icon={faTrash} />
+									{t('remove')}
+								</button>
+								<Modal
+									isOpen={isRemoveReceipt}
+									title={t('remove_receipt')}
+									onConfirm={onConfirmTerminateOrder}
+									onClose={() => setIsRemoveReceipt(false)}
+								/>
 							</div>
 						)}
 						<FormSection title={t("info_customer")}>

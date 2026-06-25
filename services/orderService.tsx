@@ -151,3 +151,9 @@ export const addImageOrder = (formData: any, token: string) => {
     const resp = callApi(url, 'POST', formData, 'v1', token, true)
     return resp;
 }
+
+export const terminateOrder = (data: any, token: string) => {
+    const url = 'dvc/order/terminate';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}

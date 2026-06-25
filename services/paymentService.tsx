@@ -36,20 +36,8 @@ export const createNewPayment = (data: any, token: string) => {
     return resp;
 }
 
-export const createPaymentWithFilter = (data: any, token: string) => {
-    const url = 'payment/create/filter';
-    const resp = callApi(url, 'POST', data, 'v1', token);
-    return resp;
-}
-
-export const updatePaymentWithFilter = (data: any, token: string) => {
-    const url = 'payment/update/filter';
-    const resp = callApi(url, 'POST', data, 'v1', token);
-    return resp;
-}
-
-export const confirmPayment = (data: any, token: string) => {
-    const url = 'payment/confirm';
+export const loadListOrderIds = (data: any, token: string) => {
+    const url = 'payment/check';
     const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }
