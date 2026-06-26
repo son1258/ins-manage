@@ -160,16 +160,16 @@ export default function Payment() {
         }
     }
 
-    const onConfirmUpdateSuccessPayment = async () => {
-        if (batchPaymentId) {
-            const data = {
-                batch_payment_id: batchPaymentId
+        const onConfirmUpdateSuccessPayment = async () => {
+            if (batchPaymentId) {
+                const data = {
+                    batch_payment_id: batchPaymentId
+                }
+                await acceptPaymentMutation.mutateAsync(data);
+                setModalUpdatePayment(false);
+                setExpandedRow(null);
             }
-            await acceptPaymentMutation.mutateAsync(data);
-            setModalUpdatePayment(false);
-            setExpandedRow(null);
         }
-    }
 
     const onConfirmTerminatePayment = async () => {
         if (batchPaymentId) {
@@ -191,9 +191,8 @@ export default function Payment() {
         const statusMap: Record<string, { bg: string; label: string }> = {
             [PAYMENT_STATUS.PAID]: { bg: 'bg-blue-500', label: t('paid') },
             [PAYMENT_STATUS.CANCEL]: { bg: 'bg-red-500', label: t('cancel') },
-            [PAYMENT_STATUS.WAIT_PAID]: { bg: 'bg-amber-500', label: t('pending_payment') },
         }
-        return statusMap[status];
+        return statusMap[status] ?? { bg: 'bg-amber-500', label: t('pending_payment') };
     }
 
     useEffect(() => {

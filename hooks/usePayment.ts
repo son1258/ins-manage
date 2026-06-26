@@ -19,6 +19,7 @@ export const useTerminatePaymentMutation = (token: string, t: any) => {
 		onSuccess: () => {
 			toast.success(t('success'));
 			queryClient.invalidateQueries({queryKey: ['payments']});
+			queryClient.invalidateQueries({ queryKey: ['orders'] });
 		},
 		onError: (err) => {
 			handleApiError(err, t);
@@ -33,6 +34,7 @@ export const useAcceptPaymentMutation = (token: string, t: any) => {
 		onSuccess: () => {
 			toast.success(t('success'));
 			queryClient.invalidateQueries({queryKey: ['payments']});
+			queryClient.invalidateQueries({ queryKey: ['orders'] });
 		},
 		onError: (err) => {
 			handleApiError(err, t);
