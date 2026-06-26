@@ -1,4 +1,4 @@
-import { loadOrderById, loadOrders, removeImageOrder, upDateOrder } from "@/services/orderService"
+import { loadOrderById, loadOrders, upDateOrder } from "@/services/orderService"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 export const useOrderList = (params: any, token: string) => {

@@ -38,6 +38,7 @@ export default function CreatePaymentLayout({ children }: { children: React.Reac
                     toast.success(t("success"));
                     router.push(`/${locale}/dashboard/payment`);
                     await queryClient.invalidateQueries({ queryKey: ['payments'] })
+                    await queryClient.invalidateQueries({ queryKey: ['orders'] })
                 }
             } catch (err: any) {
                 handleApiError(err, t);

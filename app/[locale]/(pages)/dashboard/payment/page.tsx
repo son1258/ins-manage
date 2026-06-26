@@ -22,6 +22,7 @@ import Modal from '@/components/Modal';
 import { useAcceptPaymentMutation, useListOrdersInBatchPayment, usePaymentList, useTerminatePaymentMutation } from '@/hooks/usePayment';
 import utc from 'dayjs/plugin/utc';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Payment() {
     dayjs.extend(utc);
@@ -43,6 +44,7 @@ export default function Payment() {
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
     const [batchPaymentId, setBatchPaymentId] = useState('');
+    const queryClient = useQueryClient();
 
     const status = [
         { code: PAYMENT_STATUS.PAID, name: t('paid') },
@@ -160,23 +162,31 @@ export default function Payment() {
         }
     }
 
-        const onConfirmUpdateSuccessPayment = async () => {
-            if (batchPaymentId) {
-                const data = {
-                    batch_payment_id: batchPaymentId
-                }
-                await acceptPaymentMutation.mutateAsync(data);
-                setModalUpdatePayment(false);
-                setExpandedRow(null);
+    const onConfirmUpdateSuccessPayment = async () => {
+        if (batchPaymentId) {
+            const data = {
+                batch_payment_id: batchPaymentId
             }
+            await acceptPaymentMutation.mutateAsync(data, {
+                onSuccess: () => {
+                    queryClient.invalidateQueries({ queryKey: ['orders'] });
+                }
+            });
+            setModalUpdatePayment(false);
+            setExpandedRow(null);
         }
+    }
 
     const onConfirmTerminatePayment = async () => {
         if (batchPaymentId) {
             const data = {
                 batch_payment_id: batchPaymentId
             }
-            await terminatePaymentMutation.mutateAsync(data);
+            await terminatePaymentMutation.mutateAsync(data, {
+                onSuccess: () => {
+                    queryClient.invalidateQueries({ queryKey: ['orders'] });
+                }
+            });
             setModalTerminate(false);
             setExpandedRow(null);
         }
