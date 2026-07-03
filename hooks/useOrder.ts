@@ -13,7 +13,8 @@ export const useOrderDetail = (id: string, token: string) => {
 	return useQuery({
 		queryKey: ['order-detail', id],
 		queryFn: () => loadOrderById(id, token),
-		enabled: !!token
+		enabled: !!token,
+		refetchOnMount: 'always',
 	})
 }
 
