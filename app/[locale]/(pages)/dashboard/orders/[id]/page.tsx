@@ -166,6 +166,7 @@ export default function OrderDetail() {
 		interestMoney: "",
 		change: "",
 		note: "",
+		declaration_note: "",
 		baseAmount: "",
 		documentType: ""
 	})
@@ -470,7 +471,7 @@ export default function OrderDetail() {
 		ngay_chet: "",
 		co_giam_chet: 0,
 		ma_nhanvien_thu: formData.collectorCode,
-		ghichu: formData.note,
+		ghichu: formData.declaration_note,
 		ma_vung_ss: "",
 		ma_phong_ban: formData.departmentCode,
 		id: "",
@@ -489,7 +490,7 @@ export default function OrderDetail() {
 		sothang: formData.month,
 		tongtien: formData.totalAmount,
 		tien_tudong: formData.amount,
-		ghichu: formData.note,
+		ghichu: formData.declaration_note,
 		pa: formData.plan,
 		tyle_nsdp: formData.localSupportRate,
 		tien_nsdp: formData.localSupportAmount,
@@ -648,6 +649,7 @@ export default function OrderDetail() {
 				interestMoney: "",
 				change: "",
 				note: order.comment,
+				declaration_note: isBHXH ? order.data.d05_ts.noi_dung[0].ghichu : order.data.d03_ts.noi_dung[0].ghichu,
 				documentType: "",
 				departmentCode: isBHXH ? "" : order.data.d03_ts.noi_dung[0].ma_phong_ban,
 				totalAmount: isBHXH ? calculateAmountSocial(order.base_amount, order.data.d05_ts.noi_dung[0].sothang) : 0
@@ -809,6 +811,13 @@ export default function OrderDetail() {
 									label={t("contact_address")}
 									value={formData.address}
 									onChange={(e) => handleFormDataChange("address", e.target.value)}
+								/>
+							</div>
+							<div className="col-span-2">
+								<InputGroup
+									label={t("note")}
+									value={formData.note}
+									onChange={(e) => handleFormDataChange("note", e.target.value)}
 								/>
 							</div>
 						</FormSection>
@@ -1082,9 +1091,9 @@ export default function OrderDetail() {
 								)}
 							<div className={`${isBHXH ? 'md:col-span-2' : 'md:col-span-4'} col-span-2`}>
 								<InputGroup
-									label={t("note")}
-									value={formData.note}
-									onChange={(e) => handleFormDataChange("note", e.target.value)}
+									label={t("declaration_note")}
+									value={formData.declaration_note}
+									onChange={(e) => handleFormDataChange("declaration_note", e.target.value)}
 								/>
 							</div>
 

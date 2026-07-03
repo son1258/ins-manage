@@ -208,6 +208,7 @@
   "relationship_with_house_head": "Relationship with Household Head",
   "house_head": "Household Head",
   "note": "Note",
+  "declaration_note": "Declaration note",
   "document_type": "Document Type",
   "document_number": "Document Number",
   "address": "Address",
