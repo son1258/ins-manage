@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setBatchPayments, setExcludedItems, setSelectedItems, setTotalAmount } from '@/lib/redux/slices/paymentSlice';
 import InputGroup from '@/components/InputGroup';
 import CustomSelect from '@/components/CustomSelect';
-import { PAYMENT_STATUS, PLANS, SERVICE_CODE } from '@/constants';
+import { PAYMENT_STATUS, PLANS, SERVICE_CODE, STATUS } from '@/constants';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DateRangePicker from '@/components/DateRangePicker';
 import { handleApiError } from '@/utils/errorHandler';
@@ -21,10 +21,14 @@ import Loading from '@/components/Loading';
 import { loadListOrderIds } from '@/services/paymentService';
 import { useQueryClient } from '@tanstack/react-query';
 import { loadOrders } from '@/services/orderService';
+import { useDistributorList } from '@/hooks/useDistributor';
+import { useCollectorList } from '@/hooks/useCollector';
 
 interface FormDataProps {
+    distributorCode: any,
     serviceCode: any,
     medicalCode: string,
+    collectorCode: any,
     customerName: string,
     status: number,
     plan: string,
@@ -54,9 +58,15 @@ export default function CreatePaymentRequest() {
     const [totalAmountSelectAll, setTotalAmountSelectAll] = useState(0);
     const queryClient = useQueryClient();
     const allOrdersIdsRef = useRef<any>([]);
+    const { data: distributorsResp, isLoading: isLoadDistributors, isError: errLoadDistributors } = useDistributorList({ status: STATUS.ACTIVE }, accessToken);
+    const distributors = errLoadDistributors ? [] : distributorsResp?.data;
+    const { data: collectorsResp, isLoading: isLoadingCollectors, isError: errLoadCollectors } : any = useCollectorList({ status: STATUS.ACTIVE }, accessToken);
+    const collectors = errLoadCollectors ? [] : collectorsResp?.data;
 
     const [formData, setFormData] = useState<FormDataProps>({
+        distributorCode: "",
         serviceCode: SERVICE_CODE.BHXH,
+        collectorCode: "",
         medicalCode: "",
         customerName: "",
         status: PAYMENT_STATUS.RECORDED,
@@ -100,6 +110,12 @@ export default function CreatePaymentRequest() {
         params.set('from_date', String(formData.fromDate));
         params.set('to_date', String(formData.toDate));
         params.set('service_code', String(formData.serviceCode));
+        if (formData.distributorCode) {
+            params.set('distributor_code', formData.distributorCode);
+        }
+        if (formData.collectorCode) {
+            params.set('collector_code', formData.collectorCode);
+        }
         if (formData.medicalCode) {
             params.set('medical_code', formData.medicalCode);
         }
@@ -123,7 +139,7 @@ export default function CreatePaymentRequest() {
                     if (!newExcludedIds.includes(id)) newExcludedIds.push(id);
                 });
             }
-            const newSelectedIds = allOrdersIdsRef.current.filter((id: any)=> !newExcludedIds.includes(id))
+            const newSelectedIds = allOrdersIdsRef.current.filter((id: any) => !newExcludedIds.includes(id))
             dispatch(setSelectedItems(newSelectedIds));
             setExcludedIds(newExcludedIds);
             dispatch(setExcludedItems(newExcludedIds));
@@ -150,7 +166,7 @@ export default function CreatePaymentRequest() {
             } else {
                 newExcludedIds.push(id);
             }
-            const newSelectedIds = allOrdersIdsRef.current.filter((id: any)=> !newExcludedIds.includes(id))
+            const newSelectedIds = allOrdersIdsRef.current.filter((id: any) => !newExcludedIds.includes(id))
             dispatch(setSelectedItems(newSelectedIds));
             setExcludedIds(newExcludedIds);
             dispatch(setExcludedItems(newExcludedIds));
@@ -311,7 +327,9 @@ export default function CreatePaymentRequest() {
 
     useEffect(() => {
         dispatch(setActiveTitle(t("create_payment_request")));
-        const serviceCode = Number(searchParams.get('service_code')) || SERVICE_CODE.BHXH;
+        const distributorCodeParams = searchParams.get('distributor_code') || null;
+        const serviceCodeParams = Number(searchParams.get('service_code')) || SERVICE_CODE.BHXH;
+        const collectorCodeParams = searchParams.get('collector_code') || null;
         const medicalCodeParams = searchParams.get('medical_code');
         const customerNameParams = searchParams.get('customer_name');
         const planParams = searchParams.get('plan');
@@ -324,7 +342,9 @@ export default function CreatePaymentRequest() {
         const dataFromUrl = {
             limit: limitParams || 10,
             page: pageParams || 1,
-            serviceCode: serviceCode,
+            distributorCode: distributorCodeParams,
+            serviceCode: serviceCodeParams,
+            collectorCode: collectorCodeParams,
             medicalCode: medicalCodeParams || "",
             customerName: customerNameParams || "",
             status: (statusParams != null) ? Number(statusParams) : PAYMENT_STATUS.RECORDED,
@@ -361,6 +381,32 @@ export default function CreatePaymentRequest() {
                                 options={declarations.map((type) => ({
                                     value: type.code,
                                     label: `${type.name} (${type.acronym.toUpperCase()})`,
+                                }))}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('distributor')}</label>
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={formData.distributorCode || undefined}
+                                onChange={(value) => handleValueChange("distributorCode", value)}
+                                options={distributors && distributors.map((distributor: any) => ({
+                                    value: distributor.code,
+                                    label: `${distributor.name} (${distributor.code})`,
+                                }))}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm mb-1 font-medium text-gray-600">{t('collector_code')}</label>
+                            <CustomSelect
+                                placeholder={t('select_option')}
+                                value={formData.collectorCode || undefined}
+                                onChange={(value) => handleValueChange("collectorCode", value)}
+                                options={collectors && collectors.map((collector: any) => ({
+                                    value: collector.code,
+                                    label: `${collector.name} (${collector.code})`,
                                 }))}
                             />
                         </div>
@@ -513,7 +559,7 @@ export default function CreatePaymentRequest() {
                     </div>
                 </div>
             </div>
-            <Loading stateShow={isLoading} />
+            <Loading stateShow={isLoading || isLoadDistributors || isLoadingCollectors} />
         </div>
     )
 }

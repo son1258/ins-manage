@@ -45,8 +45,14 @@ export const loadOrders = (params: any, token: string) => {
     if (params.fromOrderDate) {
         queryParams.push(`from_order_date=${params.fromOrderDate}`)
     }
-        if (params.toOrderDate) {
+    if (params.toOrderDate) {
         queryParams.push(`to_order_date=${params.toOrderDate}`)
+    }
+    if (params.distributorCode) {
+        queryParams.push(`distributor_code=${params.distributorCode}`)
+    }
+    if (params.collectorCode) {
+        queryParams.push(`collector_code=${params.collectorCode}`)
     }
 
     if (queryParams.length > 0) {
@@ -68,7 +74,7 @@ export const loadListOrderByBatchPaymentId = (data: any, token: string) => {
     if (data.batchPaymentId) {
         queryParams.push(`batch_payment_id=${data.batchPaymentId}`)
     }
-    
+
     if (queryParams.length > 0) {
         url += `?${queryParams.join("&")}`
     }

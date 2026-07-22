@@ -1,9 +1,9 @@
 "use client"
 
-import { faSearch, faSync, faTrash, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes, faMoneyCheckDollar } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSync, faTrash, faCirclePlus, faQrcode, faChevronRight, faChevronDown, faTimes, faMoneyCheckDollar, faRefresh } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useLocale, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Pagination from '@/components/Pagination';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import InputGroup from '@/components/InputGroup';
@@ -23,6 +23,8 @@ import { useAcceptPaymentMutation, useListOrdersInBatchPayment, usePaymentList, 
 import utc from 'dayjs/plugin/utc';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
+import { refreshQr } from '@/services/paymentService';
+import { handleApiError } from '@/utils/errorHandler';
 
 export default function Payment() {
     dayjs.extend(utc);
@@ -40,10 +42,13 @@ export default function Payment() {
     const [showModal, setShowModal] = useState(false);
     const [modalTerminate, setModalTerminate] = useState(false);
     const [modalUpdatePayment, setModalUpdatePayment] = useState(false);
+    const [modalRefreshQr, setModalRefreshQr] = useState(false);
     const [selectItem, setSelectItem] = useState<any>();
     const [currentSubPage, setCurrentSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(10);
     const [batchPaymentId, setBatchPaymentId] = useState('');
+    const [currentTime, setCurrentTime] = useState(dayjs());
+    const [isLoadingState, startTransition] = useTransition();
     const queryClient = useQueryClient();
 
     const status = [
@@ -90,7 +95,6 @@ export default function Payment() {
         accessToken
     )
     const listOrders = errLoadOrders ? [] : ordersRes?.data;
-
     const handleValueChange = (nameField: string, value: any) => {
         setFormData((prev: any) => ({
             ...prev,
@@ -160,6 +164,9 @@ export default function Payment() {
         if (name == "update-status-payment") {
             setModalUpdatePayment(!modalUpdatePayment);
         }
+        if (name == "refresh-qr") {
+            setModalRefreshQr(!modalRefreshQr);
+        }
     }
 
     const onConfirmUpdateSuccessPayment = async () => {
@@ -192,6 +199,27 @@ export default function Payment() {
         }
     }
 
+    const onConfrimRefreshQrPayment = async () => {
+        if (batchPaymentId) {
+            const data = {
+                batch_payment_id: batchPaymentId
+            }
+            startTransition(async () => {
+                try {
+                    const resp = await refreshQr(data, accessToken);
+                    if (resp && resp.success) {
+                        queryClient.invalidateQueries({ queryKey: ['payments'] });
+                    }
+                } catch (err) {
+                    handleApiError(err, t);
+                } finally {
+                    setModalRefreshQr(false);
+                    setExpandedRow(null);
+                }
+            })
+        }
+    }
+
     const getServiceNameFromCode = (serviceCode: number) => {
         const find = declarations.find((item: any) => item.code == serviceCode);
         return find?.acronym.toUpperCase();
@@ -204,6 +232,14 @@ export default function Payment() {
         }
         return statusMap[status] ?? { bg: 'bg-amber-500', label: t('pending_payment') };
     }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(dayjs());
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         dispatch(setActiveTitle(t('payment_request')));
@@ -295,110 +331,127 @@ export default function Payment() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {payments && payments.map((payment: any) => (
-                                        <React.Fragment key={payment.id}>
-                                            <tr
-                                                className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
-                                            >
-                                                <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
-                                                    {(payment.status === PAYMENT_STATUS.WAIT_PAID || payment.status === PAYMENT_STATUS.PAID) ? (
-                                                        <FontAwesomeIcon
-                                                            onClick={() => toggleRow(payment)}
-                                                            icon={expandedRow === payment.id ? faChevronDown : faChevronRight}
-                                                            className="text-gray-400 text-xs"
-                                                        />
-                                                    ) : (<></>)} {payment.code}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-600">{payment.user.fullname}</td>
-                                                <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(payment.amount)}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {(() => {
-                                                        const { bg, label } = getPaymentStatusBadge(payment.status)
-                                                        return (
-                                                            <span className={`${bg} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
-                                                                {label}
-                                                            </span>
-                                                        )
-                                                    })()}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-600">{dayjs.utc(payment.created_at).format("DD-MM-YYYY")}</td>
-                                                <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
-                                                <td className="px-4 py-3 text-center text-gray-400 space-x-3">
-                                                    {payment.status !== PAYMENT_STATUS.CANCEL && (
-                                                        <div className='flex items-center justify-center w-full gap-2'>
-                                                            <button
-                                                                onClick={() => handleShowOr(payment)}
-                                                                className="hover:text-blue-600">
-                                                                <FontAwesomeIcon icon={faQrcode} />
-                                                            </button>
-                                                            {(payment.status !== PAYMENT_STATUS.PAID) &&
-                                                                <button
-                                                                    onClick={() => onSelectedPayment("terminate", payment.id)}
-                                                                    className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
-                                                                </button>
-                                                            }
-                                                            {(payment.status === PAYMENT_STATUS.WAIT_PAID && role === 'admin') && (
-                                                                <button
-                                                                    onClick={() => onSelectedPayment("update-status-payment", payment.id)}
-                                                                    className="hover:text-red-600"><FontAwesomeIcon icon={faMoneyCheckDollar} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-
-                                            {expandedRow === payment.id && listOrders && (
-                                                <>
-                                                    <tr>
-                                                        <td colSpan={8} className="bg-orange-50/30 p-0">
-                                                            <div className="overflow-x-auto">
-                                                                <table className="w-full text-[12px] border-t border-orange-100">
-                                                                    <thead>
-                                                                        <tr className="text-gray-500 font-semibold border-b border-orange-100">
-                                                                            <th className="pl-14 py-2">{t('declaration_code')}</th>
-                                                                            <th className="px-4 py-2">{t('user')}</th>
-                                                                            <th className="px-4 py-2">{t('application_type')}</th>
-                                                                            <th className="px-4 py-2">{t('social_code')}</th>
-                                                                            <th className="px-4 py-2">{t('fullname')}</th>
-                                                                            <th className="px-4 py-2 text-right">{t('total_amount')}</th>
-                                                                            <th className="px-4 py-2 text-center">{t('register_date')}</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {listOrders.map((order: any) => (
-                                                                            <tr key={order.order_number} className="border-b border-orange-50 last:border-0">
-                                                                                <td className="pl-14 py-2 text-blue-600">
-                                                                                    <Link href={`/${locale}/dashboard/orders/${order.id}`}>{order.order_number}</Link>
-                                                                                </td>
-                                                                                <td className="px-4 py-2">{order.user.fullname}</td>
-                                                                                <td className="px-4 py-2">{getServiceNameFromCode(order.service_code)}</td>
-                                                                                <td className="px-4 py-2 font-mono">{order.ld_maso_bhxh}</td>
-                                                                                <td className="px-4 py-2 font-medium">{order.ld_name}</td>
-                                                                                <td className="px-4 py-2 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
-                                                                                <td className="px-4 py-2 text-center">{dayjs(order.created_date).format("DD-MM-YYYY")}</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                    <tr className="bg-orange-50/30">
-                                                        <td colSpan={8} className="px-4 py-2 border-b border-orange-100">
-                                                            <Pagination
-                                                                currentPage={currentSubPage}
-                                                                totalItems={ordersRes?.paginate.total || 0}
-                                                                pageSize={subPageSize}
-                                                                onPageChange={(page) => setCurrentSubPage(page)}
-                                                                onPageSizeChange={(limit) => setSubPageSize(limit)}
+                                    {payments && payments.map((payment: any) => {
+                                        const isQrExpired = payment.qr_expired_at && currentTime.isAfter(dayjs(payment.qr_expired_at));
+                                        return (
+                                            <React.Fragment key={payment.id}>
+                                                <tr
+                                                    className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${expandedRow === payment.id ? 'bg-blue-50/50' : ''}`}
+                                                >
+                                                    <td className="px-4 py-3 text-[#1e3a5f] font-medium text-center flex items-center justyfy-center gap-2">
+                                                        {(payment.status === PAYMENT_STATUS.WAIT_PAID || payment.status === PAYMENT_STATUS.PAID) ? (
+                                                            <FontAwesomeIcon
+                                                                onClick={() => toggleRow(payment)}
+                                                                icon={expandedRow === payment.id ? faChevronDown : faChevronRight}
+                                                                className="text-gray-400 text-xs"
                                                             />
-                                                        </td>
-                                                    </tr>
-                                                </>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
+                                                        ) : (<></>)} {payment.code}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-600">{payment.user.fullname}</td>
+                                                    <td className="px-4 py-3 text-teal-600 font-bold">{formatVND(payment.amount)}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {(() => {
+                                                            const { bg, label } = getPaymentStatusBadge(payment.status)
+                                                            return (
+                                                                <span className={`${bg} px-3 py-1 text-white rounded-full text-[11px] whitespace-nowrap`}>
+                                                                    {label}
+                                                                </span>
+                                                            )
+                                                        })()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-600">{dayjs.utc(payment.created_at).format("DD-MM-YYYY")}</td>
+                                                    <td className="px-4 py-3 text-gray-600">{dayjs(payment.updated_at).format("DD-MM-YYYY")}</td>
+                                                    <td className="px-4 py-3 text-center text-gray-400 space-x-3">
+                                                        {payment.status !== PAYMENT_STATUS.CANCEL && (
+                                                            <div className='flex items-center justify-center w-full gap-2'>
+                                                                {payment.status === PAYMENT_STATUS.WAIT_PAID && (
+                                                                    isQrExpired ? (
+                                                                        <button
+                                                                            onClick={() => onSelectedPayment("refresh-qr", payment.id)}
+                                                                            className="hover:text-green-600"
+                                                                            title="Refresh QR"
+                                                                        >
+                                                                            <FontAwesomeIcon icon={faRefresh} />
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => handleShowOr(payment)}
+                                                                            className="hover:text-blue-600"
+                                                                            title="Show QR"
+                                                                        >
+                                                                            <FontAwesomeIcon icon={faQrcode} />
+                                                                        </button>
+                                                                    )
+                                                                )}
+                                                                {(payment.status !== PAYMENT_STATUS.PAID) &&
+                                                                    <button
+                                                                        onClick={() => onSelectedPayment("terminate", payment.id)}
+                                                                        className="hover:text-red-600"><FontAwesomeIcon icon={faTrash} />
+                                                                    </button>
+                                                                }
+                                                                {(payment.status === PAYMENT_STATUS.WAIT_PAID && role === 'admin') && (
+                                                                    <button
+                                                                        onClick={() => onSelectedPayment("update-status-payment", payment.id)}
+                                                                        className="hover:text-red-600"><FontAwesomeIcon icon={faMoneyCheckDollar} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+
+                                                {expandedRow === payment.id && listOrders && (
+                                                    <>
+                                                        <tr>
+                                                            <td colSpan={8} className="bg-orange-50/30 p-0">
+                                                                <div className="overflow-x-auto">
+                                                                    <table className="w-full text-[12px] border-t border-orange-100">
+                                                                        <thead>
+                                                                            <tr className="text-gray-500 font-semibold border-b border-orange-100">
+                                                                                <th className="pl-14 py-2">{t('declaration_code')}</th>
+                                                                                <th className="px-4 py-2">{t('user')}</th>
+                                                                                <th className="px-4 py-2">{t('application_type')}</th>
+                                                                                <th className="px-4 py-2">{t('social_code')}</th>
+                                                                                <th className="px-4 py-2">{t('fullname')}</th>
+                                                                                <th className="px-4 py-2 text-right">{t('total_amount')}</th>
+                                                                                <th className="px-4 py-2 text-center">{t('register_date')}</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {listOrders.map((order: any) => (
+                                                                                <tr key={order.order_number} className="border-b border-orange-50 last:border-0">
+                                                                                    <td className="pl-14 py-2 text-blue-600">
+                                                                                        <Link href={`/${locale}/dashboard/orders/${order.id}`}>{order.order_number}</Link>
+                                                                                    </td>
+                                                                                    <td className="px-4 py-2">{order.user.fullname}</td>
+                                                                                    <td className="px-4 py-2">{getServiceNameFromCode(order.service_code)}</td>
+                                                                                    <td className="px-4 py-2 font-mono">{order.ld_maso_bhxh}</td>
+                                                                                    <td className="px-4 py-2 font-medium">{order.ld_name}</td>
+                                                                                    <td className="px-4 py-2 text-right text-teal-600 font-bold">{formatVND(order.amount)}</td>
+                                                                                    <td className="px-4 py-2 text-center">{dayjs(order.created_date).format("DD-MM-YYYY")}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr className="bg-orange-50/30">
+                                                            <td colSpan={8} className="px-4 py-2 border-b border-orange-100">
+                                                                <Pagination
+                                                                    currentPage={currentSubPage}
+                                                                    totalItems={ordersRes?.paginate.total || 0}
+                                                                    pageSize={subPageSize}
+                                                                    onPageChange={(page) => setCurrentSubPage(page)}
+                                                                    onPageSizeChange={(limit) => setSubPageSize(limit)}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    </>
+                                                )}
+                                            </React.Fragment>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -431,7 +484,7 @@ export default function Payment() {
                             <div className="p-6">
                                 <div className="mb-4 border-b border-gray-100">
                                     <div className="inline-block border-b-2 border-blue-600 px-2 pb-1 text-blue-800 font-bold text-sm">
-                                        Vietcombank
+                                        {selectItem.qr_bank_name}
                                     </div>
                                 </div>
 
@@ -439,7 +492,7 @@ export default function Payment() {
                                     <div className="w-full md:w-1/2 flex flex-col items-center">
                                         <div className="border-2 border-gray-100 rounded-xl bg-white shadow-sm p-2">
                                             <img
-                                                src={`https://api.vietqr.io/image/vietcombank-970436-23121321232.jpg?amount=${String(selectItem.amount).replace(/\D/g, '')}&addInfo=${encodeURIComponent('TT ' + selectItem.id)}`}
+                                                src={selectItem.qr_info}
                                                 alt="QR Payment"
                                                 className="w-40 h-40 object-contain"
                                             />
@@ -448,19 +501,19 @@ export default function Payment() {
                                     </div>
                                     <div className="w-full md:w-1/2 space-y-3 text-[13px]">
                                         <InfoItem
-                                            label="Tên tài khoản"
-                                            value="CONG TY CO PHAN BAO HIEM"
+                                            label={t('account_name')}
+                                            value={selectItem.qr_account_name}
                                         />
                                         <InfoItem
-                                            label="Số tài khoản"
-                                            value="0071001234567"
+                                            label={t('account_number')}
+                                            value={selectItem.qr_account_no}
                                         />
                                         <InfoItem
-                                            label="Ngân hàng"
-                                            value="Vietcombank - CN TP.HCM"
+                                            label={t('bank_name')}
+                                            value={`${selectItem.qr_bank_name} - ${selectItem.qr_bank_id}`}
                                         />
                                         <InfoItem
-                                            label="Số tiền"
+                                            label={t('amount')}
                                             value={formatVND(selectItem.amount)}
                                             isRed
                                         />
@@ -490,7 +543,13 @@ export default function Payment() {
                 onConfirm={onConfirmTerminatePayment}
                 onClose={() => setModalTerminate(false)}
             />
-            <Loading stateShow={isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending} />
+            <Modal
+                isOpen={modalRefreshQr}
+                title={t('refresh_qr')}
+                onConfirm={onConfrimRefreshQrPayment}
+                onClose={() => setModalRefreshQr(false)}
+            />
+            <Loading stateShow={isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending || isLoadingState} />
         </div>
     )
 }

@@ -269,5 +269,6 @@
     "upload_image": "Tải ảnh",
     "adding_image": "Đang tải ảnh",
     "error_batch_payment": "Có đơn đã tạo thành công. Vui lòng huỷ và tạo mới yêu cầu thanh toán!",
-    "records": "Hồ sơ"
+    "records": "Hồ sơ",
+    "refresh_qr": "Bạn có muốn làm mới mã thanh toán không?"
 }

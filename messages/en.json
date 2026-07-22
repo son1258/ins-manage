@@ -269,5 +269,6 @@
   "upload_image": "Upload Image",
   "adding_image": "Uploading",
   "error_batch_payment": "An order has been successfully created. Please cancel and create a new payment request!",
-  "records": "Records"
+  "records": "Records",
+  "refresh_qr": "Do you want to refresh payment qr?"
 }

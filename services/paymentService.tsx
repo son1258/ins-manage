@@ -53,3 +53,9 @@ export const acceptPayment = (data: any, token: string) => {
     const resp = callApi(url, 'POST', data, 'v1', token);
     return resp;
 }
+
+export const refreshQr = (data: any, token: string) => {
+    const url = 'payment/refresh-qr';
+    const resp = callApi(url, 'POST', data, 'v1', token);
+    return resp;
+}
