@@ -536,18 +536,21 @@ export default function Payment() {
                 title={t('update_success_payment')}
                 onConfirm={onConfirmUpdateSuccessPayment}
                 onClose={() => setModalUpdatePayment(false)}
+                loading={acceptPaymentMutation.isPending}
             />
             <Modal
                 isOpen={modalTerminate}
                 title={t('terminate_order')}
                 onConfirm={onConfirmTerminatePayment}
                 onClose={() => setModalTerminate(false)}
+                loading={terminatePaymentMutation.isPending}
             />
             <Modal
                 isOpen={modalRefreshQr}
                 title={t('refresh_qr')}
                 onConfirm={onConfrimRefreshQrPayment}
                 onClose={() => setModalRefreshQr(false)}
+                loading={isLoadingState}
             />
             <Loading stateShow={isLoadPayments || isLoadOrders || terminatePaymentMutation.isPending || isLoadingState} />
         </div>

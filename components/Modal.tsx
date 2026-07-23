@@ -30,6 +30,7 @@ export default function Modal({ isOpen, title, onConfirm, onClose, loading = fal
                 <Button 
                     key="back" 
                     onClick={onClose}
+                    disabled={loading}
                     className="rounded-md border-gray-300 hover:text-gray-600"
                 >
                     {t('no')}
@@ -37,7 +38,8 @@ export default function Modal({ isOpen, title, onConfirm, onClose, loading = fal
                 <Button 
                     key="submit" 
                     type="primary" 
-                    loading={loading} 
+                    loading={loading}
+                    disabled={loading}
                     onClick={onConfirm}
                     className="bg-[#926BFF] hover:bg-[#5e29f2] border-none rounded-md px-6"
                 >
