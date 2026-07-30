@@ -635,7 +635,7 @@ export default function OrderDetail() {
 				month: isBHXH ? order.data.d05_ts.noi_dung[0].sothang : order.data.d03_ts.noi_dung[0].so_thang,
 				fromMonth: isBHXH ? dayjs(order.data.d05_ts.noi_dung[0].tuthang, "MM/YYYY") : "",
 				toMonth: isBHXH ? calculateMonth(dayjs(order.data.d05_ts.noi_dung[0].tuthang, "MM/YYYY"), order.data.d05_ts.noi_dung[0].sothang) : "",
-				receiptNumber: isBHXH ? order.data.d05_ts.noi_dung[0].so_bien_lai : "",
+				receiptNumber: isBHXH ? order.data.d05_ts.noi_dung[0].so_bien_lai : order.data.d03_ts.noi_dung[0].so_bien_lai,
 				receiptDate: order.billing_date,
 				rate: order.data.tk1_ts.noi_dung[0].mucdong,
 				benefitRank: isBHXH ? "" : order.data.d03_ts.noi_dung[0].muc_huong,
@@ -971,17 +971,21 @@ export default function OrderDetail() {
 									/>
 								</>
 							)}
-							<InputGroup
-								label={t("receipt_number")}
-								value={formData.receiptNumber}
-								onChange={(e) => handleFormDataChange("receiptNumber", e.target.value)}
-							/>
-							<DatePickerCustom
-								label={t("receipt_date")}
-								value={formData.receiptDate}
-								format={"DD/MM/YYYY"}
-								onChange={(value) => handleFormDataChange("receiptNumber", value)}
-							/>
+							<div className="col-span-2">
+								<InputGroup
+									label={t("receipt_number")}
+									value={formData.receiptNumber}
+									onChange={(e) => handleFormDataChange("receiptNumber", e.target.value)}
+								/>
+							</div>
+							<div className="md:col-span-1 col-span-2">
+								<DatePickerCustom
+									label={t("receipt_date")}
+									value={formData.receiptDate}
+									format={"DD/MM/YYYY"}
+									onChange={(value) => handleFormDataChange("receiptNumber", value)}
+								/>
+							</div>
 						</FormSection>
 
 						<FormSection title={isBHXH ? t("social_ins_payment_info") : t("health_ins_payment_info")}>
