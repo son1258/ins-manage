@@ -55,13 +55,6 @@ export const PAYMENT_STATUS = {
     PARTNER_PAID: 6
 }
 
-export const ORDER_STATUS = {
-    RECORDED: 0,
-    WAIT_PAID: 1,
-    PAID: 2,
-    CANCEL: 3
-}
-
 export const GENDER = {
     MALE: 0,
     FEMALE: 1
