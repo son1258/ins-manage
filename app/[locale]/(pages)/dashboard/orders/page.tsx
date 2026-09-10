@@ -112,12 +112,15 @@ export default function Declarations() {
     const { data: ordersRes, isLoading: isLoadOrders, isError: errLoadOrders } = useOrderList(params, accessToken);
     const orders = errLoadOrders ? [] : ordersRes?.data;
 
-    const getPaymentStatus = (status: string) => {
+    const getOrderStatus = (status: string) => {
         const statusMap: Record<string, { bg: string; label: string }> = {
-            [ORDER_STATUS.RECORDED]: { bg: 'bg-green-600', label: t('recorded') },
-            [ORDER_STATUS.WAIT_PAID]: { bg: 'bg-amber-400', label: t('pending_payment') },
-            [ORDER_STATUS.PAID]: { bg: 'bg-blue-400', label: t('paid') },
-            [ORDER_STATUS.CANCEL]: { bg: 'bg-red-600', label: t('cancel') },
+            [INTERNAL_STATUS.RECORD]: { bg: 'bg-green-600', label: t('recorded') },
+            [INTERNAL_STATUS.WAIT_PAID]: { bg: 'bg-amber-400', label: t('pending_payment') },
+            [INTERNAL_STATUS.PAID]: { bg: 'bg-blue-400', label: t('paid') },
+            [INTERNAL_STATUS.CANCELLED]: { bg: 'bg-red-600', label: t('cancel') },
+            [INTERNAL_STATUS.RECORD_SUBMITTED]: { bg: 'bg-emerald-400', label: t('record_submitted') },
+            [INTERNAL_STATUS.RETURNED_BY_SOCIAL_INS]: { bg: 'bg-rose-400', label: t('return_by_social_ins') },
+            [INTERNAL_STATUS.APPROVED_BY_SOCIAL_INS]: { bg: 'bg-sky-600', label: t('approved_by_social_ins') },
         }
         return statusMap[status]
     }
@@ -486,7 +489,7 @@ export default function Declarations() {
                                             <td className="px-4 py-3 text-gray-600">{dayjs(order.billing_date).format("DD/MM/YYYY")}</td>
                                             <td className="px-4 py-3 text-center">
                                                 {(() => {
-                                                    const { bg, label } = getPaymentStatus(order.status)
+                                                    const { bg, label } = getOrderStatus(order.status)
                                                     return (
                                                         <span className={`${bg} text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap`}>
                                                             {label}
